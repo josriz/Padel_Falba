@@ -1,79 +1,73 @@
 // app/_layout.jsx
 
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { Stack, useSegments, router } from 'expo-router';
-import { supabase } from '../src/supabaseClient'; // Percorso corretto
+import { SplashScreen, Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { supabase } from '../src/supabaseClient';
+import { View } from 'react-native';
 
-// Questo componente si occupa del reindirizzamento in base allo stato utente
-function InitialLayout() {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const segments = useSegments();
-    const inAuthGroup = segments[0] === '(auth)';
+// Impedisce all'hiding automatico della schermata iniziale di avvenire prima che le risorse siano caricate.
+SplashScreen.preventAutoHideAsync();
 
-    useEffect(() => {
-        // 1. Controlla la sessione iniziale
-        supabase.auth.getSession().then(({ data }) => {
-            setUser(data?.session?.user || null);
-            setLoading(false);
-        });
-
-        // 2. Ascolta i cambiamenti di stato
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user || null);
-            setLoading(false);
-        });
-
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
-    }, []);
-
-    // 3. Logica di reindirizzamento
-    useEffect(() => {
-        if (loading) return;
-
-        if (user && inAuthGroup) {
-            router.replace('/(app)');
-        } else if (!user && !inAuthGroup) {
-            router.replace('/(auth)');
-        }
-    }, [user, loading, inAuthGroup]);
-
-    // Visualizza un caricamento iniziale
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#10b981" />
-            </View>
-        );
-    }
-
-    // 🚨 RITORNO CORRETTO: I gruppi (auth) e (app) vengono scoperti automaticamente.
-    return (
-        <Stack>
-            {/* Solo rotte non convenzionali e fallback */}
-            <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} /> 
-            
-            {/* Se hai una cartella (tabs) va dichiarata qui */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            
-            {/* NON DICHIARARE (auth) e (app) */}
-        </Stack>
-    );
-}
-
-// Layout principale esportato
 export default function RootLayout() {
-    return <InitialLayout />;
+  const [initialState, setInitialState] = useState(null);
+  const [session, setSession] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // 1. Ascolta i cambiamenti di stato di autenticazione
+  useEffect(() => {
+    // Gestisce lo stato iniziale della sessione
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoaded(true);
+    });
+
+    // Ascolta i cambiamenti futuri (login, logout, ecc.)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    // Pulizia
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // 2. Nasconde la splash screen quando il progetto è caricato e lo stato di autenticazione è noto
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+
+  if (!loaded) {
+    // Mostra una schermata di caricamento finché lo stato della sessione non è noto
+    return <View />;
+  }
+
+  return <RootLayoutNav session={session} />;
 }
 
-const styles = StyleSheet.create({
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#0f172a',
-    },
-});
+// Navigazione principale basata sullo stato di autenticazione
+function RootLayoutNav({ session }) {
+  // session è true se l'utente è loggato, false/null altrimenti
+
+  return (
+    <Stack>
+      {/* Il segmento (auth) è l'area di Login/Registrazione
+        Header disabilitato per rimuovere la scritta (auth)/index in alto
+      */}
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} /> 
+      
+      {/* Il segmento (app) è l'area protetta (Dashboard, Profilo, ecc.)
+        Header disabilitato qui perché usiamo il Drawer Navigator (che ha il suo header)
+      */}
+      <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      
+      {/* Gestisce le rotte non trovate (404) */}
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
