@@ -1,0 +1,157 @@
+/* Reset base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #1e90ff;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+header h2 {
+  font-size: 1.6rem;
+}
+
+/* Hamburger */
+.hamburger {
+  font-size: 28px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.hamburger:hover {
+  transform: rotate(90deg);
+}
+
+/* Menu laterale */
+.menu {
+  position: fixed;
+  top: 0;
+  right: -300px; /* fuori schermo */
+  width: 250px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: -3px 0 10px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 15px;
+  transition: right 0.3s ease;
+  z-index: 200;
+}
+
+.menu.open {
+  right: 0;
+}
+
+.menu button {
+  padding: 12px;
+  border: none;
+  background-color: #1e90ff;
+  color: #fff;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.menu button:hover {
+  background-color: #187bcd;
+  transform: scale(1.03);
+}
+
+/* Dashboard */
+.dashboard {
+  padding: 20px;
+}
+
+/* Campo */
+.court-card {
+  margin-bottom: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  background-color: #f5f5f5;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.court-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.court-card h4 {
+  margin-bottom: 10px;
+}
+
+/* Slot */
+.slot {
+  flex: 1 1 30%;
+  padding: 8px;
+  border-radius: 5px;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.slot.available {
+  background-color: #4CAF50;
+}
+
+.slot.booked {
+  background-color: #ff4d4d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.slot.selected {
+  background-color: #ffa500;
+}
+
+.slot:hover:not(.booked) {
+  transform: scale(1.05);
+}
+
+/* Bottone prenota */
+.book-btn {
+  padding: 12px 25px;
+  background-color: #1e90ff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.book-btn:hover {
+  background-color: #187bcd;
+  transform: scale(1.03);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .court-card {
+    flex-direction: column;
+  }
+  .slot {
+    flex: 1 1 45%;
+  }
+}
