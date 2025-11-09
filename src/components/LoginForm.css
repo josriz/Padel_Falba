@@ -1,109 +1,209 @@
-.login-container {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 30px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  border-radius: 12px;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  background-color: #fff;
-}
+import React, { useState } from "react";
+import { supabase } from "../supabaseClient";
+import { FcGoogle } from "react-icons/fc";
+import { FaFacebook } from "react-icons/fa";
+import "./LoginForm.css";
 
-.login-logo img {
-  width: 120px;
-  margin-bottom: 10px; /* spazio tra logo e titolo */
-}
+export default function LoginForm({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-.login-logo h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #333;
-}
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      onLogin(data.user);
+    }
+  };
 
-.login-logo p {
-  font-style: italic;
-  text-transform: lowercase;
-  margin: 5px 0 15px 0; /* spazio sopra e sotto */
-  font-size: 0.85rem;
-  color: #555;
-}
+  const handleOAuthLogin = async (provider) => {
+    setError("");
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({ provider });
+    setLoading(false);
+    if (error) setError(error.message);
+  };
 
-.login-form input {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-}
+  return (
+    <div className="login-container" style={{ maxWidth: 400, margin: "auto", padding: 20, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <div
+        className="login-logo"
+        style={{
+          textAlign: "center",
+          marginBottom: 20,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <img
+          src="/logo.png"
+          alt="Logo Cieffe Padel"
+          style={{ maxWidth: 180, marginBottom: 2 }}
+        />
+        <h2 style={{ margin: 0 }}>Accedi a Cieffe Padel Club</h2>
+        <p
+          style={{
+            fontStyle: "italic",
+            margin: "4px 0 0 0",
+            color: "#666",
+            fontSize: "0.9rem",
+          }}
+        >
+          by Claudio Falba
+        </p>
+      </div>
 
-.login-form button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  background-color: #1f8ef1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: 0.3s;
-}
+      <form className="login-form" onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={loading}
+          aria-label="Email"
+          style={{ padding: 12, fontSize: "1rem", width: "100%", marginBottom: 12 }}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={loading}
+          aria-label="Password"
+          style={{ padding: 12, fontSize: "1rem", width: "100%", marginBottom: 12 }}
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 14,
+            borderRadius: 8,
+            border: "none",
+            backgroundColor: "#2980b9",
+            color: "white",
+            fontWeight: "700",
+            fontSize: "1.1rem",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Caricamento..." : "Accedi"}
+        </button>
+      </form>
 
-.login-form button:hover {
-  background-color: #0f7ae5;
-}
+      <div
+        className="divider"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          margin: "20px 0",
+          fontWeight: "bold",
+          color: "#2980b9",
+        }}
+      >
+        <hr style={{ flexGrow: 1, borderColor: "#2980b9" }} />
+        <span style={{ margin: "0 10px" }}>o</span>
+        <hr style={{ flexGrow: 1, borderColor: "#2980b9" }} />
+      </div>
 
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 15px 0;
-  color: #888;
-  font-weight: bold;
-}
+      <div
+        className="social-login"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <button
+          onClick={() => handleOAuthLogin("google")}
+          disabled={loading}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            padding: 14,
+            borderRadius: 8,
+            border: "1px solid #ddd",
+            backgroundColor: "#fff",
+            fontWeight: "600",
+            fontSize: "1.1rem",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          <FcGoogle size={24} />
+          Accedi con Google
+        </button>
 
-.divider .line {
-  flex: 1;
-  height: 1px;
-  background-color: #ccc;
-}
+        <button
+          onClick={() => handleOAuthLogin("facebook")}
+          disabled={loading}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            padding: 14,
+            borderRadius: 8,
+            border: "1px solid #3b5998",
+            backgroundColor: "#3b5998",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          <FaFacebook size={24} />
+          Accedi con Facebook
+        </button>
+      </div>
 
-.divider .or {
-  margin: 0 10px;
-  text-transform: lowercase;
-}
+      <div
+        className="login-links"
+        style={{ textAlign: "center", fontSize: 14, marginBottom: 12 }}
+      >
+        <a href="#" style={{ marginRight: 10, color: "#2980b9" }}>
+          Reset Password
+        </a>
+        |
+        <a href="#" style={{ marginLeft: 10, color: "#2980b9" }}>
+          Registrati
+        </a>
+      </div>
 
-.social-login button {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: 0.3s;
-}
+      <div
+        className="login-privacy"
+        style={{ fontSize: 12, color: "#666", textAlign: "center" }}
+      >
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#666", textDecoration: "underline" }}
+        >
+          Privacy & Policy
+        </a>
+      </div>
 
-.social-login button:hover {
-  background-color: #f0f0f0;
-}
+      {error && (
+        <p style={{ color: "red", marginTop: 10, textAlign: "center" }}>{error}</p>
+      )}
 
-.login-links {
-  margin-top: 15px;
-}
-
-.login-links a {
-  color: #1f8ef1;
-  text-decoration: none;
-  margin: 0 5px;
-}
-
-.login-links a:hover {
-  text-decoration: underline;
-}
-
-.login-privacy {
-  margin-top: 20px;
-  font-size: 0.8rem;
-  color: #888;
+      {/* Footer con copyright */}
+      <footer style={{ textAlign: "center", fontSize: 12, color: "#999", marginTop: 20 }}>
+        © 2025 Josè Rizzi
+      </footer>
+    </div>
+  );
 }

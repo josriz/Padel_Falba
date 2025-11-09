@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 import LoginForm from "./components/LoginForm";
@@ -34,15 +40,23 @@ export default function App() {
       setLoading(false);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-      setIsAdmin(session?.user?.user_metadata?.role === "admin");
-    });
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+        setIsAdmin(session?.user?.user_metadata?.role === "admin");
+      }
+    );
 
     return () => authListener.subscription.unsubscribe();
   }, []);
 
   if (loading) return <p>Caricamento...</p>;
+
+  // logout gestito qui
+  const handleLogout = () => {
+    setUser(null);
+    supabase.auth.signOut();
+  };
 
   return (
     <Router>
@@ -52,11 +66,19 @@ export default function App() {
         </Routes>
       ) : (
         <Routes>
-          <Route path="/" element={<DashboardWrapper user={user} isAdmin={isAdmin} setUser={setUser} />} />
+          <Route
+            path="/"
+            element={
+              <DashboardWrapper user={user} isAdmin={isAdmin} setUser={setUser} />
+            }
+          />
           <Route path="/prenotazioni" element={<Prenotazioni user={user} />} />
-          <Route path="/eventi" element={<EventiTornei user={user} isAdmin={isAdmin} />} />
+          <Route
+            path="/eventi"
+            element={<EventiTornei user={user} isAdmin={isAdmin} />}
+          />
           <Route path="/marketplace" element={<Marketplace user={user} />} />
-          <Route path="/profilo" element={<Profilo user={user} />} />
+          <Route path="/profilo" element={<Profilo user={user} onLogout={handleLogout} />} />
           {/* Redirect 404 a dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

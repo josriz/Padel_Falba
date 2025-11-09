@@ -1,80 +1,54 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import React from "react";
 
-export default function DashboardUser({ user, isAdmin }) {
-  const [fields, setFields] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newFieldName, setNewFieldName] = useState("");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetchFields();
-  }, []);
-
-  async function fetchFields() {
-    setLoading(true);
-    const { data, error } = await supabase.from("courts").select("*").order("created_at", { ascending: false });
-    if (error) {
-      setError(error.message);
-    } else {
-      setFields(data);
-      setError("");
-    }
-    setLoading(false);
-  }
-
-  async function addField() {
-    if (!newFieldName.trim()) {
-      setError("Inserisci un nome valido");
-      return;
-    }
-    const { error } = await supabase.from("courts").insert([{ name: newFieldName }]);
-    if (error) {
-      setError(error.message);
-    } else {
-      setNewFieldName("");
-      fetchFields();
-    }
-  }
-
+export default function DashboardUser({ user, isAdmin, onLogout }) {
   return (
-    <div style={{ maxWidth: "800px", margin: "40px auto", fontFamily: "Arial, sans-serif" }}>
-      <h1>Benvenuto, {user.email}</h1>
+    <div
+      style={{
+        maxWidth: 800,
+        margin: "40px auto",
+        fontFamily: "Arial, sans-serif",
+        padding: "0 16px",
+        textAlign: "center",
+      }}
+    >
+      <h1 style={{ fontSize: "2rem", marginBottom: 16 }}>
+        Benvenuto, {user.email}
+      </h1>
+      <p style={{ fontSize: "1.1rem", color: "#555", marginBottom: 24 }}>
+        Questa è la tua dashboard di vetrina.
+      </p>
       {isAdmin && (
-        <p style={{ fontWeight: "bold", color: "green" }}>
+        <p
+          style={{
+            fontWeight: "bold",
+            color: "green",
+            fontSize: "1rem",
+            marginBottom: 24,
+          }}
+        >
           Puoi variare e modificare i dati come amministratore.
         </p>
       )}
-
-      <section style={{ marginTop: 30 }}>
-        <h2>Campi Disponibili</h2>
-        {loading ? (
-          <p>Caricamento campi...</p>
-        ) : (
-          <ul>
-            {fields.map((field) => (
-              <li key={field.id}>{field.name}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {isAdmin && (
-        <section style={{ marginTop: 30 }}>
-          <h2>Aggiungi Nuovo Campo</h2>
-          <input
-            type="text"
-            placeholder="Nome nuovo campo"
-            value={newFieldName}
-            onChange={(e) => setNewFieldName(e.target.value)}
-            style={{ padding: 8, width: "70%", marginRight: 8 }}
-          />
-          <button onClick={addField} style={{ padding: "8px 16px" }}>
-            Aggiungi
-          </button>
-          {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>}
-        </section>
-      )}
+      <div style={{ textAlign: "right" }}>
+        <button
+          onClick={onLogout}
+          style={{
+            backgroundColor: "#f44336",
+            color: "#fff",
+            border: "none",
+            padding: "12px 20px",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: "bold",
+            fontSize: "1rem",
+            transition: "background-color 0.3s",
+          }}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = "#d32f2f")}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = "#f44336")}
+        >
+          Logout
+        </button>
+      </div>
     </div>
   );
 }

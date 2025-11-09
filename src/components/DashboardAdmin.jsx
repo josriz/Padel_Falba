@@ -60,31 +60,79 @@ export default function DashboardAdmin({ user }) {
   if (loading) return <p>Caricamento dati amministratore...</p>;
 
   return (
-    <div>
-      <h2>Dashboard Amministratore</h2>
+    <div style={{ maxWidth: 800, margin: "auto", padding: 20, fontFamily: "Arial, sans-serif" }}>
+      <h2 style={{ textAlign: "center", marginBottom: 20 }}>Dashboard Amministratore</h2>
 
-      <h3>Campi</h3>
-      <ul>
-        {courts.map((court) => (
-          <li key={court.id}>
-            {court.name} - {court.location || "Nessuna posizione"}
-          </li>
-        ))}
-      </ul>
+      <section style={{ marginBottom: 30 }}>
+        <h3>Campi</h3>
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {courts.map((court) => (
+            <li
+              key={court.id}
+              style={{
+                padding: 10,
+                borderBottom: "1px solid #ccc",
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{court.name}</span>
+              <span>{court.location || "Nessuna posizione"}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      <h3>Prenotazioni</h3>
-      <ul>
-        {bookings.map((booking) => (
-          <li key={booking.id}>
-            Campo {booking.court_id} | Utente: {booking.user_email || booking.user_id} |{" "}
-            {new Date(booking.start_time).toLocaleString()} -{" "}
-            {new Date(booking.end_time).toLocaleString()}{" "}
-            <button onClick={() => handleDeleteBooking(booking.id)} style={{ marginLeft: "10px" }}>
-              Elimina
-            </button>
-          </li>
-        ))}
-      </ul>
+      <section style={{ marginBottom: 30 }}>
+        <h3>Prenotazioni</h3>
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {bookings.map((booking) => (
+            <li
+              key={booking.id}
+              style={{
+                padding: 10,
+                borderBottom: "1px solid #ccc",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                Campo {booking.court_id} | Utente: {booking.user_email || booking.user_id} |{" "}
+                {new Date(booking.start_time).toLocaleString()} -{" "}
+                {new Date(booking.end_time).toLocaleString()}
+              </div>
+              <button
+                onClick={() => handleDeleteBooking(booking.id)}
+                style={{
+                  marginLeft: 10,
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #e74c3c",
+                  backgroundColor: "#e74c3c",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Elimina
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Dicitura finale */}
+      <footer
+        style={{
+          textAlign: "center",
+          fontSize: 12,
+          color: "#999",
+          marginTop: 40,
+        }}
+      >
+        © 2025 Josè Rizzi
+      </footer>
     </div>
   );
 }
