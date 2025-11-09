@@ -1,12 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { Menu, X } from "lucide-react";
 import DashboardUser from "./DashboardUser";
+import AdminDashboard from "./dashboardAdmin";
 
-export default function DashboardWrapper({ user, setUser, isAdmin }) {
+export default function DashboardWrapper({ user, setUser, isAdmin, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("DashboardWrapper isAdmin:", isAdmin);
+  }, [isAdmin]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -41,8 +47,7 @@ export default function DashboardWrapper({ user, setUser, isAdmin }) {
             onClick={() => setMenuOpen(false)}
             style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.3)" }}
             aria-hidden="true"
-          ></div>
-
+          />
           <nav
             style={{
               position: "fixed",
@@ -81,7 +86,31 @@ export default function DashboardWrapper({ user, setUser, isAdmin }) {
       )}
 
       <main style={{ padding: "30px" }}>
-        <DashboardUser user={user} isAdmin={isAdmin} />
+        {isAdmin ? (
+          <>
+            {editing ? (
+              <AdminDashboard />
+            ) : (
+              <DashboardUser user={user} isAdmin={isAdmin} onLogout={onLogout} />
+            )}
+            <button
+              onClick={() => setEditing(!editing)}
+              style={{
+                marginTop: 20,
+                padding: "10px 20px",
+                backgroundColor: editing ? "#4caf50" : "#2196f3",
+                color: "white",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+              }}
+            >
+              {editing ? "Disabilita modifica" : "Abilita modifica"}
+            </button>
+          </>
+        ) : (
+          <DashboardUser user={user} isAdmin={isAdmin} onLogout={onLogout} />
+        )}
       </main>
     </div>
   );

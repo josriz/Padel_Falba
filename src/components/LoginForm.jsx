@@ -9,20 +9,37 @@ export default function LoginForm({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
+
+    if (isSignUp) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        alert(
+          "Registrazione completata! Controlla la tua email per confermare l'account."
+        );
+      }
     } else {
-      onLogin(data.user);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        onLogin(data.session);
+      }
     }
   };
 
@@ -49,7 +66,6 @@ export default function LoginForm({ onLogin }) {
         boxSizing: "border-box",
       }}
     >
-      {/* Logo */}
       <div
         className="login-logo"
         style={{
@@ -74,7 +90,7 @@ export default function LoginForm({ onLogin }) {
             textAlign: "center",
           }}
         >
-          Accedi a Cieffe Padel Club
+          {isSignUp ? "Registrati a Cieffe Padel Club" : "Accedi a Cieffe Padel Club"}
         </h2>
         <p
           style={{
@@ -88,7 +104,6 @@ export default function LoginForm({ onLogin }) {
         </p>
       </div>
 
-      {/* Form */}
       <form
         onSubmit={handleLogin}
         style={{
@@ -120,7 +135,7 @@ export default function LoginForm({ onLogin }) {
               border: "1px solid #ccc",
               width: "100%",
               boxSizing: "border-box",
-              height: 55, // 🔹 uniforma l'altezza
+              height: 55,
             }}
           />
         ))}
@@ -130,7 +145,7 @@ export default function LoginForm({ onLogin }) {
           disabled={loading}
           style={{
             width: "100%",
-            height: 55, // 🔹 stessa altezza
+            height: 55,
             borderRadius: 10,
             border: "none",
             backgroundColor: "#2980b9",
@@ -140,11 +155,14 @@ export default function LoginForm({ onLogin }) {
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Caricamento..." : "Accedi"}
+          {loading
+            ? "Caricamento..."
+            : isSignUp
+            ? "Registrati"
+            : "Accedi"}
         </button>
       </form>
 
-      {/* Divider */}
       <div
         style={{
           display: "flex",
@@ -162,7 +180,6 @@ export default function LoginForm({ onLogin }) {
         <hr style={{ flexGrow: 1, borderColor: "#2980b9" }} />
       </div>
 
-      {/* Social buttons */}
       <div
         style={{
           display: "flex",
@@ -180,7 +197,7 @@ export default function LoginForm({ onLogin }) {
             alignItems: "center",
             justifyContent: "center",
             gap: 10,
-            height: 55, // 🔹 stessa altezza
+            height: 55,
             borderRadius: 10,
             border: "1px solid #ddd",
             backgroundColor: "#fff",
@@ -191,7 +208,7 @@ export default function LoginForm({ onLogin }) {
           }}
         >
           <FcGoogle size={24} />
-          Accedi con Google
+          {isSignUp ? "Registrati con Google" : "Accedi con Google"}
         </button>
 
         <button
@@ -202,7 +219,7 @@ export default function LoginForm({ onLogin }) {
             alignItems: "center",
             justifyContent: "center",
             gap: 10,
-            height: 55, // 🔹 stessa altezza
+            height: 55,
             borderRadius: 10,
             border: "1px solid #3b5998",
             backgroundColor: "#3b5998",
@@ -214,11 +231,10 @@ export default function LoginForm({ onLogin }) {
           }}
         >
           <FaFacebook size={24} />
-          Accedi con Facebook
+          {isSignUp ? "Registrati con Facebook" : "Accedi con Facebook"}
         </button>
       </div>
 
-      {/* Links */}
       <div
         style={{
           textAlign: "center",
@@ -226,12 +242,38 @@ export default function LoginForm({ onLogin }) {
           marginTop: 20,
         }}
       >
-        <a href="#" style={{ color: "#2980b9", marginRight: 8 }}>
+        <a
+          href="#"
+          style={{ color: "#2980b9", marginRight: 8 }}
+          onClick={async (e) => {
+            e.preventDefault();
+            if (!email) {
+              alert("Inserisci la tua email nel campo sopra per ricevere il link di reset.");
+              return;
+            }
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: "http://localhost:5173/reset-password", // Modifica con la tua pagina reale
+            });
+            if (error) {
+              alert("Errore invio email: " + error.message);
+            } else {
+              alert("📩 Email inviata! Controlla la tua casella di posta.");
+            }
+          }}
+        >
           Reset Password
         </a>
         |
-        <a href="#" style={{ color: "#2980b9", marginLeft: 8 }}>
-          Registrati
+        <a
+          href="#"
+          style={{ color: "#2980b9", marginLeft: 8 }}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsSignUp(!isSignUp);
+            setError("");
+          }}
+        >
+          {isSignUp ? "Torna al login" : "Registrati"}
         </a>
       </div>
 

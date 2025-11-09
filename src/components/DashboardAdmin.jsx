@@ -1,138 +1,98 @@
-// src/components/DashboardAdmin.jsx
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import React, { useState } from "react";
 
-export default function DashboardAdmin({ user }) {
-  const [courts, setCourts] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+export default function AdminDashboard() {
+  const [editing, setEditing] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState(null);
+  const [newsText, setNewsText] = useState("");
 
-  // Verifica se l'utente è admin
-  useEffect(() => {
-    if (user?.role === "admin") {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-    }
-  }, [user]);
-
-  // Fetch dati
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: courtsData, error: courtsError } = await supabase
-          .from("courts")
-          .select("*");
-        if (courtsError) throw courtsError;
-        setCourts(courtsData || []);
-
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from("bookings")
-          .select("*");
-        if (bookingsError) throw bookingsError;
-        setBookings(bookingsData || []);
-      } catch (err) {
-        console.error("Errore fetching dati:", err);
-      } finally {
-        setLoading(false);
-      }
+  const handleBackgroundChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBackgroundImage(reader.result);
     };
-
-    fetchData();
-  }, []);
-
-  // Elimina prenotazione
-  const handleDeleteBooking = async (id) => {
-    const confirmDelete = window.confirm("Sei sicuro di voler eliminare questa prenotazione?");
-    if (!confirmDelete) return;
-
-    try {
-      const { error } = await supabase.from("bookings").delete().eq("id", id);
-      if (error) throw error;
-      setBookings((prev) => prev.filter((b) => b.id !== id));
-    } catch (err) {
-      console.error("Errore eliminazione prenotazione:", err);
-    }
+    reader.readAsDataURL(file);
   };
 
-  if (!isAdmin) return <p>Accesso negato: non sei amministratore.</p>;
-  if (loading) return <p>Caricamento dati amministratore...</p>;
+  const handleNewsChange = (e) => setNewsText(e.target.value);
+
+  const handleNewsSubmit = () => {
+    alert("News salvata: " + newsText);
+  };
 
   return (
-    <div style={{ maxWidth: 800, margin: "auto", padding: 20, fontFamily: "Arial, sans-serif" }}>
-      <h2 style={{ textAlign: "center", marginBottom: 20 }}>Dashboard Amministratore</h2>
+    <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "Arial, sans-serif", padding: 20 }}>
+      <h1>Dashboard Amministratore - Gestione Contenuti</h1>
 
-      <section style={{ marginBottom: 30 }}>
-        <h3>Campi</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {courts.map((court) => (
-            <li
-              key={court.id}
-              style={{
-                padding: 10,
-                borderBottom: "1px solid #ccc",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span>{court.name}</span>
-              <span>{court.location || "Nessuna posizione"}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section style={{ marginBottom: 30 }}>
-        <h3>Prenotazioni</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {bookings.map((booking) => (
-            <li
-              key={booking.id}
-              style={{
-                padding: 10,
-                borderBottom: "1px solid #ccc",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                Campo {booking.court_id} | Utente: {booking.user_email || booking.user_id} |{" "}
-                {new Date(booking.start_time).toLocaleString()} -{" "}
-                {new Date(booking.end_time).toLocaleString()}
-              </div>
-              <button
-                onClick={() => handleDeleteBooking(booking.id)}
-                style={{
-                  marginLeft: 10,
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #e74c3c",
-                  backgroundColor: "#e74c3c",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Elimina
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Dicitura finale */}
-      <footer
+      <button
+        onClick={() => setEditing(!editing)}
         style={{
-          textAlign: "center",
-          fontSize: 12,
-          color: "#999",
-          marginTop: 40,
+          padding: "10px 20px",
+          backgroundColor: editing ? "#4caf50" : "#2196f3",
+          color: "white",
+          border: "none",
+          borderRadius: 5,
+          cursor: "pointer",
+          marginBottom: 20,
         }}
       >
-        © 2025 Josè Rizzi
-      </footer>
+        {editing ? "Disabilita modalità Modifica" : "Abilita modalità Modifica"}
+      </button>
+
+      <section style={{ marginBottom: 30 }}>
+        <h2>Imposta foto di sfondo trasparente</h2>
+        {editing && (
+          <input type="file" accept="image/*" onChange={handleBackgroundChange} />
+        )}
+        {backgroundImage && (
+          <div
+            style={{
+              marginTop: 10,
+              width: "100%",
+              height: 200,
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "contain",
+              opacity: 0.5,
+              border: "1px solid #ccc",
+              borderRadius: 8,
+            }}
+          />
+        )}
+      </section>
+
+      <section style={{ marginBottom: 30 }}>
+        <h2>Scrivi e Gestisci News</h2>
+        {editing ? (
+          <>
+            <textarea
+              value={newsText}
+              onChange={handleNewsChange}
+              rows={5}
+              style={{ width: "100%", padding: 10, fontSize: 16, borderRadius: 5, borderColor: "#ccc" }}
+              placeholder="Scrivi qui la news..."
+            />
+            <button
+              onClick={handleNewsSubmit}
+              style={{
+                marginTop: 10,
+                padding: "10px 20px",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: 5,
+                cursor: "pointer",
+              }}
+            >
+              Salva News
+            </button>
+          </>
+        ) : (
+          <p>Per modificare, abilita la modalità Modifica.</p>
+        )}
+      </section>
     </div>
   );
 }

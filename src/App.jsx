@@ -18,9 +18,9 @@ import Profilo from "./components/Profilo";
 function LoginWrapper({ onLogin }) {
   const navigate = useNavigate();
 
-  const handleLogin = (user) => {
-    onLogin(user);
-    navigate("/", { replace: true }); // redirect a dashboard
+  const handleLogin = (session) => {
+    onLogin(session);
+    navigate("/", { replace: true });
   };
 
   return <LoginForm onLogin={handleLogin} />;
@@ -31,11 +31,23 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Funzione per estrarre ruoli dal token JWT
+  const getRolesFromSession = (session) => {
+    if (!session || !session.access_token) return [];
+    try {
+      const jwtPayload = JSON.parse(atob(session.access_token.split(".")[1]));
+      return jwtPayload.roles || [];
+    } catch {
+      return [];
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data?.session?.user) {
+      if (data?.session) {
         setUser(data.session.user);
-        setIsAdmin(data.session.user.user_metadata?.role === "admin");
+        const roles = getRolesFromSession(data.session);
+        setIsAdmin(roles.includes("admin"));
       }
       setLoading(false);
     });
@@ -43,7 +55,8 @@ export default function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user || null);
-        setIsAdmin(session?.user?.user_metadata?.role === "admin");
+        const roles = getRolesFromSession(session);
+        setIsAdmin(roles.includes("admin"));
       }
     );
 
@@ -52,7 +65,6 @@ export default function App() {
 
   if (loading) return <p>Caricamento...</p>;
 
-  // logout gestito qui
   const handleLogout = () => {
     setUser(null);
     supabase.auth.signOut();
@@ -69,7 +81,12 @@ export default function App() {
           <Route
             path="/"
             element={
-              <DashboardWrapper user={user} isAdmin={isAdmin} setUser={setUser} />
+              <DashboardWrapper
+                user={user}
+                isAdmin={isAdmin}
+                setUser={setUser}
+                onLogout={handleLogout}
+              />
             }
           />
           <Route path="/prenotazioni" element={<Prenotazioni user={user} />} />
@@ -78,8 +95,10 @@ export default function App() {
             element={<EventiTornei user={user} isAdmin={isAdmin} />}
           />
           <Route path="/marketplace" element={<Marketplace user={user} />} />
-          <Route path="/profilo" element={<Profilo user={user} onLogout={handleLogout} />} />
-          {/* Redirect 404 a dashboard */}
+          <Route
+            path="/profilo"
+            element={<Profilo user={user} onLogout={handleLogout} />}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}

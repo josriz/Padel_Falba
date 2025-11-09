@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function DashboardUser({ user, isAdmin, onLogout }) {
+export default function DashboardUser({ user, isAdmin, onLogout, editing }) {
   return (
     <div
       style={{
@@ -27,6 +27,7 @@ export default function DashboardUser({ user, isAdmin, onLogout }) {
           }}
         >
           Puoi variare e modificare i dati come amministratore.
+          {editing && " (Modalità modifica attiva)"}
         </p>
       )}
       <div style={{ textAlign: "right" }}>
