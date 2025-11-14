@@ -1,88 +1,70 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
-export default function Dashboard({ user, onLogout, isAdmin }) {
+const Dashboard = () => {
+  const { user } = useOutletContext();
+
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Errore nel fetch del profilo:', error);
+    } else {
+      setProfileData(data);
+    }
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  let displayName = user?.email || 'Utente';
+  if (profileData?.full_name) {
+    displayName = profileData.full_name.split(' ')[0];
+  } else if (user?.user_metadata?.full_name) {
+    displayName = user.user_metadata.full_name.split(' ')[0];
+  }
+
+  if (loading) {
+    return <p className="text-center p-12 text-gray-600">Caricamento dati dashboard...</p>;
+  }
+
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        margin: "0 auto",
-        padding: "40px 5vw",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        minHeight: "100vh",
-        backgroundColor: "#fff",
-        boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "1.8rem",
-          textAlign: "center",
-          marginBottom: 10,
-          color: "#333",
-        }}
-      >
-        Benvenuto, {user.email}
+    <div className={`max-w-5xl mx-auto px-4 ${isMobile ? 'py-6' : 'py-10'}`}>
+      <h1 className={`text-blue-600 font-extrabold ${isMobile ? 'text-2xl' : 'text-4xl'} mb-8`}>
+        👋 Benvenuto, <span className="font-black">{displayName}</span>!
       </h1>
 
-      <p
-        style={{
-          fontSize: "1.1rem",
-          textAlign: "center",
-          color: "#555",
-          marginBottom: 20,
-        }}
-      >
-        Questa è la tua dashboard di vetrina.
-      </p>
+      {/* Spazio libero per contenuti amministrativi dinamici */}
 
-      {isAdmin && (
-        <p
-          style={{
-            fontWeight: "bold",
-            color: "green",
-            fontSize: "1rem",
-            textAlign: "center",
-            marginBottom: 20,
-          }}
-        >
-          Puoi variare e modificare i dati come amministratore.
-        </p>
-      )}
-
-      <div
-        style={{
-          marginTop: 30,
-          width: "100%",
-          maxWidth: 500,
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <button
-          onClick={onLogout}
-          style={{
-            width: "100%",
-            maxWidth: 200,
-            height: 55,
-            borderRadius: 10,
-            border: "none",
-            backgroundColor: "#f44336",
-            color: "#fff",
-            fontWeight: "600",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            transition: "background-color 0.3s ease",
-          }}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = "#d32f2f")}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = "#f44336")}
-        >
-          Logout
-        </button>
-      </div>
     </div>
   );
-}
+};
+
+export default Dashboard;

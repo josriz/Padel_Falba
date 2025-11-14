@@ -1,267 +1,155 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-export default function Profilo({ user, onLogout }) {
+export default function Profilo({ user }) {
   const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState("");
-  const [website, setWebsite] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [website, setWebsite] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [message, setMessage] = useState('');
+
+  const userId = user?.id;
 
   useEffect(() => {
-    if (user?.id) getProfile();
-  }, [user]);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    getProfile();
+  }, [userId]);
 
   async function getProfile() {
+    setLoading(true);
+    setMessage('');
     try {
-      setLoading(true);
       const { data, error, status } = await supabase
-        .from("profiles")
-        .select("username, website, avatar_url")
-        .eq("id", user.id)
+        .from('profiles')
+        .select(`username, website, avatar_url`)
+        .eq('id', userId)
         .single();
 
-      if (error && status !== 406) throw error;
+      if (error && status !== 406) {
+        throw error;
+      }
 
       if (data) {
-        setUsername(data.username || "");
-        setWebsite(data.website || "");
-        setAvatarUrl(data.avatar_url || "");
+        setUsername(data.username);
+        setWebsite(data.website);
+        setAvatarUrl(data.avatar_url);
       }
     } catch (error) {
-      console.error("Errore caricamento profilo:", error.message);
+      setMessage('Errore nel caricamento del profilo. Potrebbe non esistere.');
     } finally {
       setLoading(false);
     }
   }
 
-  async function updateProfile(event) {
-    event.preventDefault();
+  async function updateProfile(e) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    const updates = {
+      id: userId,
+      username,
+      website,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    };
 
     try {
-      setLoading(true);
-      const updates = {
-        id: user.id,
-        username,
-        website,
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString(),
-      };
-      const { error } = await supabase.from("profiles").upsert(updates);
-
+      const { error } = await supabase.from('profiles').upsert([updates], { onConflict: 'id' });
       if (error) throw error;
-      alert("Profilo aggiornato con successo ✅");
+      setMessage('✅ Profilo aggiornato con successo!');
     } catch (error) {
-      alert("Errore aggiornamento profilo: " + error.message);
+      setMessage(`❌ Errore nell'aggiornamento: ${error.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  async function uploadAvatar(event) {
-    try {
-      setUploading(true);
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data, error: urlError } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      if (urlError) throw urlError;
-
-      setAvatarUrl(data?.publicUrl || data?.publicURL || "");
-    } catch (error) {
-      alert("Errore caricamento avatar: " + error.message);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    if (onLogout) onLogout();
-    alert("Logout effettuato correttamente 👋");
-  }
-
-  if (!user) {
-    return <p>Caricamento utente...</p>;
-  }
+  if (loading) return <div className="max-w-lg mx-auto p-6 text-center text-gray-600">Caricamento profilo...</div>;
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        margin: "0 auto",
-        padding: "40px 5vw",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        minHeight: "100vh",
-        backgroundColor: "#f7f8fa",
-        boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
-        position: "relative",
-      }}
-    >
-      {/* Bottone Logout */}
-      <button
-        onClick={handleLogout}
-        style={{
-          position: "absolute",
-          top: 20,
-          right: 20,
-          backgroundColor: "#e74c3c",
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          padding: "10px 16px",
-          cursor: "pointer",
-          height: 55, // stessa altezza dei bottoni principali
-          fontSize: "1.1rem",
-        }}
-      >
-        Logout
-      </button>
+    <div className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-semibold mb-6">👤 Gestione Profilo</h2>
 
-      <h1 style={{ marginBottom: 20, fontSize: "1.8rem", color: "#333" }}>
-        Gestione Profilo
-      </h1>
-
-      {loading ? (
-        <p>Caricamento dati...</p>
-      ) : (
-        <form
-          onSubmit={updateProfile}
-          style={{
-            width: "100%",
-            maxWidth: 500,
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            backgroundColor: "#fff",
-            padding: 20,
-            borderRadius: 12,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          }}
+      {message && (
+        <p
+          className={`mb-6 p-3 rounded font-semibold ${
+            message.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}
         >
-          <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-            Email (non modificabile):
-            <input
-              type="text"
-              value={user.email || ""}
-              disabled
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: 14,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-                height: 55,
-                boxSizing: "border-box",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-            Username:
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: 14,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-                height: 55,
-                boxSizing: "border-box",
-              }}
-              required
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-            Website:
-            <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: 14,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-                height: 55,
-                boxSizing: "border-box",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-            Avatar:
-            <div style={{ margin: "10px 0", display: "flex", justifyContent: "center" }}>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid #3498db",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 120,
-                    height: 120,
-                    backgroundColor: "#ccc",
-                    borderRadius: "50%",
-                  }}
-                ></div>
-              )}
-            </div>
-            <input type="file" accept="image/*" onChange={uploadAvatar} disabled={uploading} />
-          </label>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              height: 55,
-              borderRadius: 10,
-              border: "none",
-              backgroundColor: "#3498db",
-              color: "#fff",
-              fontWeight: "600",
-              fontSize: "1.1rem",
-              cursor: "pointer",
-            }}
-          >
-            {loading ? "Salvando..." : "Salva Profilo"}
-          </button>
-        </form>
+          {message}
+        </p>
       )}
+
+      <form onSubmit={updateProfile} className="space-y-6">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            id="email"
+            type="text"
+            value={user?.email || ''}
+            disabled
+            className="w-full p-3 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            Nome Utente
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={username || ''}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="w-full p-3 border border-gray-300 rounded"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
+            Sito Web (Opzionale)
+          </label>
+          <input
+            id="website"
+            type="url"
+            value={website || ''}
+            onChange={(e) => setWebsite(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="avatar_url" className="block text-sm font-medium text-gray-700 mb-1">
+            URL Avatar (Immagine Profilo)
+          </label>
+          <input
+            id="avatar_url"
+            type="url"
+            value={avatarUrl || ''}
+            onChange={(e) => setAvatarUrl(e.target.value)}
+            placeholder="Inserisci un URL immagine"
+            className="w-full p-3 border border-gray-300 rounded"
+          />
+          {avatarUrl && (
+            <img alt="Avatar Preview" src={avatarUrl} className="mt-3 w-24 h-24 rounded-full object-cover" />
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded shadow disabled:opacity-50"
+        >
+          {loading ? 'Aggiornamento...' : 'Aggiorna Profilo'}
+        </button>
+      </form>
     </div>
   );
 }

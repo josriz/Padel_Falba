@@ -1,98 +1,72 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-export default function AdminDashboard() {
-  const [editing, setEditing] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState(null);
-  const [newsText, setNewsText] = useState("");
+export default function DashboardAdmin({ user }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
-  const handleBackgroundChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBackgroundImage(reader.result);
-    };
-    reader.readAsDataURL(file);
+  useEffect(() => {
+    fetchAllBookings();
+  }, []);
+
+  const fetchAllBookings = async () => {
+    setLoading(true);
+    setMessage('');
+    const { data, error } = await supabase.from('bookings').select('*').order('date', { ascending: false }).limit(100);
+    if (error) {
+      setMessage('❌ Errore nel caricamento delle prenotazioni.');
+      setBookings([]);
+    } else {
+      setBookings(data || []);
+    }
+    setLoading(false);
   };
 
-  const handleNewsChange = (e) => setNewsText(e.target.value);
-
-  const handleNewsSubmit = () => {
-    alert("News salvata: " + newsText);
+  const handleDeleteBooking = async (id) => {
+    if (!window.confirm("Sei sicuro di voler eliminare questa prenotazione?")) return;
+    const { error } = await supabase.from('bookings').delete().eq('id', id);
+    if (error) {
+      setMessage('❌ Errore durante l\'eliminazione.');
+    } else {
+      setMessage('✅ Prenotazione eliminata con successo!');
+      fetchAllBookings();
+    }
   };
+
+  if (loading) return <p className="p-5">Caricamento pannello Admin...</p>;
 
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "Arial, sans-serif", padding: 20 }}>
-      <h1>Dashboard Amministratore - Gestione Contenuti</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">🛠️ Area Amministratore</h1>
+      <p className="mb-6">Benvenuto, {user?.email}. Da qui puoi gestire tutti gli aspetti del club.</p>
+      <h3 className="text-2xl mb-4">Gestione Prenotazioni Recenti ({bookings.length})</h3>
+      {message && (
+        <p className={`p-3 rounded mb-6 border ${message.startsWith('❌') ? 'border-red-600 text-red-600' : 'border-green-600 text-green-600'}`}>
+          {message}
+        </p>
+      )}
 
-      <button
-        onClick={() => setEditing(!editing)}
-        style={{
-          padding: "10px 20px",
-          backgroundColor: editing ? "#4caf50" : "#2196f3",
-          color: "white",
-          border: "none",
-          borderRadius: 5,
-          cursor: "pointer",
-          marginBottom: 20,
-        }}
-      >
-        {editing ? "Disabilita modalità Modifica" : "Abilita modalità Modifica"}
-      </button>
-
-      <section style={{ marginBottom: 30 }}>
-        <h2>Imposta foto di sfondo trasparente</h2>
-        {editing && (
-          <input type="file" accept="image/*" onChange={handleBackgroundChange} />
-        )}
-        {backgroundImage && (
-          <div
-            style={{
-              marginTop: 10,
-              width: "100%",
-              height: 200,
-              backgroundImage: `url(${backgroundImage})`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-              backgroundSize: "contain",
-              opacity: 0.5,
-              border: "1px solid #ccc",
-              borderRadius: 8,
-            }}
-          />
-        )}
-      </section>
-
-      <section style={{ marginBottom: 30 }}>
-        <h2>Scrivi e Gestisci News</h2>
-        {editing ? (
-          <>
-            <textarea
-              value={newsText}
-              onChange={handleNewsChange}
-              rows={5}
-              style={{ width: "100%", padding: 10, fontSize: 16, borderRadius: 5, borderColor: "#ccc" }}
-              placeholder="Scrivi qui la news..."
-            />
-            <button
-              onClick={handleNewsSubmit}
-              style={{
-                marginTop: 10,
-                padding: "10px 20px",
-                backgroundColor: "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: 5,
-                cursor: "pointer",
-              }}
-            >
-              Salva News
-            </button>
-          </>
-        ) : (
-          <p>Per modificare, abilita la modalità Modifica.</p>
-        )}
-      </section>
+      {bookings.length === 0 ? (
+        <p>Nessuna prenotazione trovata.</p>
+      ) : (
+        <div className="grid gap-4">
+          {bookings.map(b => (
+            <div key={b.id} className="flex justify-between items-center p-4 rounded border bg-gray-50">
+              <div>
+                <strong>Data: {new Date(b.date).toLocaleDateString()}</strong> | Orario: {b.time_slot}
+                <p className="text-sm text-gray-600 mt-1">Campo ID: {b.court_id} | Utente ID: {b.user_id}</p>
+              </div>
+              <button
+                onClick={() => handleDeleteBooking(b.id)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded cursor-pointer"
+              >
+                Elimina
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

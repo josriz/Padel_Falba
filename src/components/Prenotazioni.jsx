@@ -1,309 +1,210 @@
-import React, { useState, useEffect } from "react";
-import BackButton from "./BackButton";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-const COURTS = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  name: `Campo ${i + 1}`,
-  description: `Campo numero ${i + 1}, superficie sintetica`,
-}));
+export default function Prenotazioni({ user }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({
+    campo_id: '',
+    data_ora: '',
+    durata_min: 60,
+    sfidante_email: '',
+  });
+  const [message, setMessage] = useState('');
 
-const TIME_SLOTS = [
-  "09:00 - 10:00",
-  "10:00 - 11:00",
-  "11:00 - 12:00",
-  "12:00 - 13:00",
-  "16:00 - 17:00",
-  "17:00 - 18:00",
-  "18:00 - 19:00",
-  "19:00 - 20:00",
-];
-
-const initialBookings = [
-  { id: 1, courtId: 1, date: "2025-11-10", timeSlot: "10:00 - 11:00", user: "Mario" },
-  { id: 2, courtId: 3, date: "2025-11-10", timeSlot: "17:00 - 18:00", user: "Luigi" },
-];
-
-const uniformStyle = {
-  width: "100%",
-  height: 55, // uniforme con altri bottoni/input
-  padding: "0 14px",
-  fontSize: "1.1rem",
-  borderRadius: 10,
-  border: "1.5px solid #88aaff",
-  boxShadow: "inset 0 0 8px #bbd7ff",
-  cursor: "pointer",
-  boxSizing: "border-box",
-  outline: "none",
-  transition: "border-color 0.3s, box-shadow 0.3s",
-};
-
-const uniformFocusStyle = {
-  borderColor: "#4a90e2",
-  boxShadow: "inset 0 0 12px #88aaff",
-};
-
-export default function Prenotazioni() {
-  const [bookings, setBookings] = useState(initialBookings);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedCourt, setSelectedCourt] = useState(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
-  const [message, setMessage] = useState("");
+  const userId = user?.id;
 
   useEffect(() => {
-    if (!selectedDate) {
-      setSelectedCourt(null);
-      setSelectedTimeSlot("");
+    if (!userId) {
+      setLoading(false);
+      return;
     }
-  }, [selectedDate]);
+    fetchBookings();
+  }, [userId]);
 
-  const isCourtAvailable = (courtId, date, timeSlot) => {
-    return !bookings.some(
-      (b) => b.courtId === courtId && b.date === date && b.timeSlot === timeSlot
-    );
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('prenotazioni')
+        .select(`*, campi ( nome )`)
+        .or(`user_id.eq.${userId},sfidante_id.eq.${userId}`)
+        .gte('data_ora', new Date().toISOString())
+        .order('data_ora', { ascending: true });
+
+      if (error) throw error;
+      setBookings(data || []);
+      setMessage('');
+    } catch {
+      setMessage('Errore nel caricamento delle tue prenotazioni.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBooking = () => {
-    if (!selectedDate || !selectedCourt || !selectedTimeSlot) {
-      setMessage("Seleziona data, campo e fascia oraria");
+  const handleBooking = async (e) => {
+    e.preventDefault();
+    setMessage('');
+
+    if (!userId) {
+      setMessage('Devi essere loggato per prenotare.');
       return;
     }
-    if (!isCourtAvailable(selectedCourt, selectedDate, selectedTimeSlot)) {
-      setMessage("Campo non disponibile per la data e orario selezionati");
-      return;
+
+    let sfidanteId = null;
+    if (form.sfidante_email) {
+      const { data: sfidanteData, error: sfidanteError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', form.sfidante_email)
+        .single();
+
+      if (sfidanteError || !sfidanteData) {
+        setMessage('Email sfidante non trovata o non registrata.');
+        return;
+      }
+      sfidanteId = sfidanteData.id;
     }
+
     const newBooking = {
-      id: bookings.length + 1,
-      courtId: selectedCourt,
-      date: selectedDate,
-      timeSlot: selectedTimeSlot,
-      user: "UtenteDemo",
+      user_id: userId,
+      campo_id: form.campo_id,
+      data_ora: form.data_ora,
+      durata_min: form.durata_min,
+      sfidante_id: sfidanteId,
+      stato: 'confermata',
     };
-    setBookings([...bookings, newBooking]);
-    setMessage("Prenotazione effettuata con successo!");
+
+    const { error } = await supabase.from('prenotazioni').insert([newBooking]);
+
+    if (!error) {
+      setMessage('✅ Prenotazione effettuata con successo!');
+      setForm({ campo_id: '', data_ora: '', durata_min: 60, sfidante_email: '' });
+      fetchBookings();
+    } else {
+      setMessage(`❌ Errore prenotazione: ${error.message}. Il campo potrebbe essere già occupato.`);
+    }
   };
+
+  if (loading)
+    return <div className="p-6 text-center text-gray-600">Caricamento prenotazioni...</div>;
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        margin: "0 auto",
-        padding: "40px 5vw",
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        backgroundColor: "#f7f8fa",
-        boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <BackButton />
+    <div className="max-w-3xl mx-auto p-6 border border-gray-300 rounded-lg">
+      <h2 className="text-2xl font-semibold mb-4">🎾 Nuova Prenotazione Campo</h2>
 
-      <h2
-        style={{
-          color: "#3366cc",
-          textAlign: "center",
-          marginBottom: 30,
-          fontSize: "1.8rem",
-        }}
-      >
-        Prenotazioni Campi Padel
-      </h2>
-
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 500,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          backgroundColor: "#fff",
-          padding: 20,
-          borderRadius: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        }}
-      >
-        {/* Data */}
-        <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-          Data:
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 10)}
-            style={uniformStyle}
-            onFocus={(e) => Object.assign(e.target.style, uniformFocusStyle)}
-            onBlur={(e) =>
-              Object.assign(e.target.style, {
-                borderColor: "#88aaff",
-                boxShadow: "inset 0 0 8px #bbd7ff",
-              })
-            }
-            aria-label="Seleziona la data"
-          />
-        </label>
-
-        {/* Campo */}
-        <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-          Campo:
-          <select
-            disabled={!selectedDate}
-            value={selectedCourt ?? ""}
-            onChange={(e) => setSelectedCourt(Number(e.target.value))}
-            style={uniformStyle}
-            onFocus={(e) => Object.assign(e.target.style, uniformFocusStyle)}
-            onBlur={(e) =>
-              Object.assign(e.target.style, {
-                borderColor: "#88aaff",
-                boxShadow: "inset 0 0 8px #bbd7ff",
-              })
-            }
-            aria-label="Seleziona il campo"
-          >
-            <option value="" disabled>
-              Seleziona campo
-            </option>
-            {COURTS.map((court) => {
-              const occupied = selectedDate
-                ? TIME_SLOTS.some((ts) => !isCourtAvailable(court.id, selectedDate, ts))
-                : false;
-              return (
-                <option
-                  key={court.id}
-                  value={court.id}
-                  title={court.description}
-                  style={{ color: occupied ? "#a00" : "inherit" }}
-                >
-                  {court.name} {occupied ? "(parzialmente occupato)" : ""}
-                </option>
-              );
-            })}
-          </select>
-        </label>
-
-        {/* Fascia Oraria */}
-        <label style={{ display: "flex", flexDirection: "column", fontSize: "1rem" }}>
-          Fascia Oraria:
-          <select
-            disabled={!selectedCourt}
-            value={selectedTimeSlot}
-            onChange={(e) => setSelectedTimeSlot(e.target.value)}
-            style={uniformStyle}
-            onFocus={(e) => Object.assign(e.target.style, uniformFocusStyle)}
-            onBlur={(e) =>
-              Object.assign(e.target.style, {
-                borderColor: "#88aaff",
-                boxShadow: "inset 0 0 8px #bbd7ff",
-              })
-            }
-            aria-label="Seleziona la fascia oraria"
-          >
-            <option value="" disabled>
-              Seleziona orario
-            </option>
-            {TIME_SLOTS.map((slot) => (
-              <option
-                key={slot}
-                value={slot}
-                disabled={!isCourtAvailable(selectedCourt, selectedDate, slot)}
-                style={{ color: !isCourtAvailable(selectedCourt, selectedDate, slot) ? "#a00" : "inherit" }}
-              >
-                {slot} {!isCourtAvailable(selectedCourt, selectedDate, slot) ? "(Occupato)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {/* Prenota */}
-        <button
-          disabled={!selectedDate || !selectedCourt || !selectedTimeSlot}
-          onClick={handleBooking}
-          style={{
-            width: "100%",
-            height: 55,
-            borderRadius: 10,
-            border: "none",
-            backgroundColor: "#3366cc",
-            color: "white",
-            fontWeight: "600",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(51, 102, 204, 0.6)",
-            transition: "background-color 0.3s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#274a8a")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#3366cc")}
+      {message && (
+        <p
+          className={`mb-6 p-3 rounded ${
+            message.startsWith('✅')
+              ? 'bg-green-100 text-green-700 border border-green-400'
+              : 'bg-red-100 text-red-700 border border-red-400'
+          }`}
         >
-          Prenota Campo
-        </button>
+          {message}
+        </p>
+      )}
 
-        {message && (
-          <p
-            style={{
-              marginTop: 20,
-              fontWeight: "600",
-              color: message.includes("successo") ? "green" : "red",
-              textAlign: "center",
-              fontSize: 16,
-            }}
+      <form onSubmit={handleBooking} className="space-y-4">
+        <div>
+          <label htmlFor="campo_id" className="block mb-1 font-medium">
+            Campo:
+          </label>
+          <select
+            id="campo_id"
+            value={form.campo_id}
+            onChange={(e) => setForm({ ...form, campo_id: e.target.value })}
+            required
+            className="w-full p-3 border border-gray-300 rounded"
           >
-            {message}
-          </p>
+            <option value="">Seleziona Campo</option>
+            <option value="1">Campo 1 (Standard)</option>
+            <option value="2">Campo 2 (Premium)</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="data_ora" className="block mb-1 font-medium">
+            Data e Ora:
+          </label>
+          <input
+            type="datetime-local"
+            id="data_ora"
+            value={form.data_ora}
+            onChange={(e) => setForm({ ...form, data_ora: e.target.value })}
+            required
+            className="w-full p-3 border border-gray-300 rounded"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="durata_min" className="block mb-1 font-medium">
+            Durata (minuti):
+          </label>
+          <select
+            id="durata_min"
+            value={form.durata_min}
+            onChange={(e) => setForm({ ...form, durata_min: parseInt(e.target.value) })}
+            required
+            className="w-full p-3 border border-gray-300 rounded"
+          >
+            <option value="60">60 minuti</option>
+            <option value="90">90 minuti</option>
+            <option value="120">120 minuti</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="sfidante_email" className="block mb-1 font-medium">
+            Email Sfidante (Opzionale):
+          </label>
+          <input
+            type="email"
+            id="sfidante_email"
+            value={form.sfidante_email}
+            onChange={(e) => setForm({ ...form, sfidante_email: e.target.value })}
+            placeholder="email@sfidante.it"
+            className="w-full p-3 border border-gray-300 rounded"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded cursor-pointer"
+        >
+          Prenota Ora
+        </button>
+      </form>
+
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Le Tue Prenotazioni Future ({bookings.length})</h3>
+        {bookings.length === 0 ? (
+          <p>Nessuna prenotazione futura trovata.</p>
+        ) : (
+          <ul className="space-y-4">
+            {bookings.map((b) => (
+              <li
+                key={b.id}
+                className="p-4 border border-gray-300 rounded shadow-sm bg-white"
+              >
+                <p>
+                  <strong>Campo:</strong> {b.campi?.nome || 'N/D'}
+                </p>
+                <p>
+                  <strong>Quando:</strong> {new Date(b.data_ora).toLocaleString('it-IT')}
+                </p>
+                <p>
+                  <strong>Durata:</strong> {b.durata_min} min
+                </p>
+                <p>
+                  <strong>Stato:</strong> {b.stato}
+                </p>
+                {b.sfidante_id && <p>Sfida con: {b.sfidante_email || 'Altro Utente'}</p>}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-
-      {/* Prenotazioni per data */}
-      {selectedDate && (
-        <section
-          style={{
-            marginTop: 40,
-            width: "100%",
-            maxWidth: 500,
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            padding: 20,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h3 style={{ marginBottom: 15, color: "#3366cc", fontWeight: "600" }}>
-            Prenotazioni per il {selectedDate}
-          </h3>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15 }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f1f8ff" }}>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "2px solid #88aaff" }}>
-                  Campo
-                </th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "2px solid #88aaff" }}>
-                  Orario
-                </th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "2px solid #88aaff" }}>
-                  Prenotato da
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings
-                .filter((b) => b.date === selectedDate)
-                .map((b) => (
-                  <tr key={b.id} style={{ borderBottom: "1px solid #ddd" }}>
-                    <td style={{ padding: 10 }}>{COURTS.find((c) => c.id === b.courtId)?.name || "Sconosciuto"}</td>
-                    <td style={{ padding: 10 }}>{b.timeSlot}</td>
-                    <td style={{ padding: 10 }}>{b.user}</td>
-                  </tr>
-                ))}
-              {bookings.filter((b) => b.date === selectedDate).length === 0 && (
-                <tr>
-                  <td colSpan="3" style={{ padding: 10, textAlign: "center", color: "#999" }}>
-                    Nessuna prenotazione per questa data.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </section>
-      )}
     </div>
   );
 }

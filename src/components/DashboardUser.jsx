@@ -1,55 +1,47 @@
-import React from "react";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-export default function DashboardUser({ user, isAdmin, onLogout, editing }) {
+export default function DashboardUser({ user }) {
+  const [profileName, setProfileName] = useState('Utente');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfileName = async () => {
+      if (!user) return;
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('nome_completo')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Errore nel recupero del profilo utente:", error.message);
+      } 
+
+      let displayName = user.email;
+      if (data?.nome_completo) {
+        displayName = data.nome_completo.split(' ')[0];
+      } else if (user.user_metadata?.first_name) {
+        displayName = user.user_metadata.first_name;
+      }
+
+      setProfileName(displayName);
+      setLoading(false);
+    };
+
+    fetchProfileName();
+  }, [user]);
+
+  if (loading) {
+    return <h2 className="p-5 text-center text-gray-600">Caricamento...</h2>;
+  }
+
   return (
-    <div
-      style={{
-        maxWidth: 800,
-        margin: "40px auto",
-        fontFamily: "Arial, sans-serif",
-        padding: "0 16px",
-        textAlign: "center",
-      }}
-    >
-      <h1 style={{ fontSize: "2rem", marginBottom: 16 }}>
-        Benvenuto, {user.email}
-      </h1>
-      <p style={{ fontSize: "1.1rem", color: "#555", marginBottom: 24 }}>
-        Questa è la tua dashboard di vetrina.
-      </p>
-      {isAdmin && (
-        <p
-          style={{
-            fontWeight: "bold",
-            color: "green",
-            fontSize: "1rem",
-            marginBottom: 24,
-          }}
-        >
-          Puoi variare e modificare i dati come amministratore.
-          {editing && " (Modalità modifica attiva)"}
-        </p>
-      )}
-      <div style={{ textAlign: "right" }}>
-        <button
-          onClick={onLogout}
-          style={{
-            backgroundColor: "#f44336",
-            color: "#fff",
-            border: "none",
-            padding: "12px 20px",
-            borderRadius: 8,
-            cursor: "pointer",
-            fontWeight: "bold",
-            fontSize: "1rem",
-            transition: "background-color 0.3s",
-          }}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = "#d32f2f")}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = "#f44336")}
-        >
-          Logout
-        </button>
-      </div>
+    <div className="p-5 border-b border-gray-300 max-w-4xl mx-auto box-border w-full">
+      <h1 className="text-3xl font-semibold">👋 Benvenuto, {profileName}!</h1>
+      {/* Area libera per contenuti amministrativi o personali */}
     </div>
   );
 }

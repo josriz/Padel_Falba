@@ -1,0 +1,153 @@
+/* Stili per il contenitore principale */
+.login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+/* Stili per il logo e il titolo */
+.login-logo {
+    margin-bottom: 25px;
+}
+
+.login-logo img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+}
+
+.login-logo h2 {
+    margin: 5px 0 2px 0;
+    color: #007bff; /* Blu Padel/Club */
+    font-size: 1.8em;
+}
+
+.login-logo p {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+/* Stili per il form */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.login-form input {
+    padding: 12px 15px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1em;
+    width: 100%;
+    box-sizing: border-box; /* Importante per padding e border */
+}
+
+.login-form button {
+    padding: 12px;
+    background-color: #28a745; /* Verde per l'azione principale (Accedi/Registrati) */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.login-form button:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+/* Stili per il divisore "o" */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: #adb5bd;
+}
+
+.divider .line {
+    flex-grow: 1;
+    height: 1px;
+    background-color: #e9ecef;
+}
+
+.divider .or {
+    padding: 0 10px;
+}
+
+/* Stili per i bottoni social */
+.social-login {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.social-login button {
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.social-login button:first-child { /* Google */
+    background-color: #dc3545; /* Rosso per Google */
+    color: white;
+    border: none;
+}
+
+.social-login button:last-child { /* Facebook */
+    background-color: #007bff; /* Blu per Facebook */
+    color: white;
+    border: none;
+}
+
+.social-login button:hover {
+    opacity: 0.9;
+}
+
+/* Stili per i link in basso */
+.login-links {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+.login-links a {
+    color: #007bff;
+    text-decoration: none;
+    margin: 0 5px;
+    transition: color 0.2s;
+}
+
+.login-links a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* Stile per la privacy (solo testo) */
+.login-privacy {
+    color: #adb5bd;
+    font-size: 0.8em;
+}
+
+/* Messaggi di errore */
+.login-container p[style] {
+    font-weight: bold;
+}

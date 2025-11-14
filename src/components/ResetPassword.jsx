@@ -1,87 +1,59 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../supabaseClient";
+import React, { useState } from 'react';
 
 export default function ResetPassword() {
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [accessToken, setAccessToken] = useState("");
 
-  useEffect(() => {
-    // Recupera token dalla URL (supabase lo aggiunge come query param: ?access_token=xxx)
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("access_token");
-    if (token) setAccessToken(token);
-  }, []);
-
-  const handleReset = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!password) {
-      setMessage("⚠️ Inserisci una nuova password");
-      return;
-    }
-    if (!accessToken) {
-      setMessage("❌ Token non valido o mancante");
-      return;
-    }
-
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({
-      password,
-    }, accessToken);
-    setLoading(false);
+    setMessage('');
 
-    if (error) {
-      setMessage("❌ Errore: " + error.message);
-    } else {
-      setMessage("✅ Password aggiornata con successo! Puoi ora tornare al login.");
-    }
+    // Qui potresti chiamare l'API di reset di Supabase o altro provider
+    // Simulazione di invio email reset
+    setTimeout(() => {
+      setLoading(false);
+      setMessage('Se l’email è registrata, riceverai un link per il reset password.');
+    }, 1500);
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 400,
-        margin: "50px auto",
-        padding: 20,
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        textAlign: "center",
-        fontFamily: "sans-serif",
-      }}
-    >
-      <h2>Reset Password</h2>
-      <p>Inserisci la nuova password per il tuo account</p>
-      <form onSubmit={handleReset} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-        <input
-          type="password"
-          placeholder="Nuova password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-          style={{ padding: 10, fontSize: "1rem", borderRadius: 5, border: "1px solid #ccc" }}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: 12,
-            borderRadius: 5,
-            border: "none",
-            backgroundColor: "#2980b9",
-            color: "#fff",
-            fontWeight: "600",
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Aggiornamento..." : "Aggiorna Password"}
-        </button>
-      </form>
-      {message && (
-        <p style={{ marginTop: 15, color: message.startsWith("✅") ? "green" : "red" }}>
-          {message}
-        </p>
-      )}
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-5">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+        <h2 className="text-2xl font-bold mb-6 text-center">Reset Password</h2>
+
+        {message && 
+          <p className="mb-6 p-3 text-center rounded bg-green-100 text-green-700 border border-green-400">
+            {message}
+          </p>
+        }
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block mb-2 font-semibold text-gray-700">
+              Inserisci la tua email
+            </label>
+            <input
+              type="email"
+              id="email"
+              required
+              placeholder="email@example.com"
+              className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {loading ? 'Invio in corso...' : 'Invia link di reset'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

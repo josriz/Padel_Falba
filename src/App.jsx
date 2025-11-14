@@ -1,107 +1,127 @@
-import React, { useState, useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
-import { supabase } from "./supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
 
-import LoginForm from "./components/LoginForm";
-import DashboardWrapper from "./components/DashboardWrapper";
-import Prenotazioni from "./components/Prenotazioni";
-import EventiTornei from "./components/EventiTornei";
-import Marketplace from "./components/Marketplace";
-import Profilo from "./components/Profilo";
+// Layouts e Componenti di Base
+import PublicLayout from './components/PublicLayout';
+import DashboardWrapper from './components/DashboardWrapper';
+import Auth from './components/Auth';
 
-function LoginWrapper({ onLogin }) {
-  const navigate = useNavigate();
+// Componenti Dashboard
+import DashboardOverview from './components/DashboardOverview';
+import Profilo from './components/Profilo';
+import Prenotazioni from './components/Prenotazioni';
+import TournamentDashboard from './components/TournamentDashboard';
+import EventiTornei from './components/EventiTornei';
+import MarketplaceList from './components/MarketplaceList';
+import MarketplaceGestion from './components/MarketplaceGestion';
+import GestioneEventiAdmin from './components/GestioneEventiAdmin';
 
-  const handleLogin = (session) => {
-    onLogin(session);
-    navigate("/", { replace: true });
-  };
+const ADMIN_EMAIL = 'giose.rizzi@gmail.com';
 
-  return <LoginForm onLogin={handleLogin} />;
-}
+const ProtectedRoute = ({ user, children }) => {
+  if (!user) return <Navigate to="/" replace />;
+  return children;
+};
+
+const AdminRoute = ({ user, isAdmin, children }) => {
+  if (!user || !isAdmin) return <Navigate to="/dashboard" replace />;
+  return children;
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
-  // Funzione per estrarre ruoli dal token JWT
-  const getRolesFromSession = (session) => {
-    if (!session || !session.access_token) return [];
+  // Funzione logout da poter passare a DashboardWrapper
+  const handleLogout = async () => {
     try {
-      const jwtPayload = JSON.parse(atob(session.access_token.split(".")[1]));
-      return jwtPayload.roles || [];
-    } catch {
-      return [];
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAdmin(false);
+    } catch (error) {
+      console.error('Errore durante il logout:', error);
     }
   };
 
+  // Forza logout automatico all'avvio
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) {
-        setUser(data.session.user);
-        const roles = getRolesFromSession(data.session);
-        setIsAdmin(roles.includes("admin"));
+    const forceLogout = async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Errore durante logout automatico:', error);
       }
-      setLoading(false);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-        const roles = getRolesFromSession(session);
-        setIsAdmin(roles.includes("admin"));
-      }
-    );
-
-    return () => authListener.subscription.unsubscribe();
+    };
+    forceLogout();
   }, []);
 
-  if (loading) return <p>Caricamento...</p>;
+  useEffect(() => {
+    const setAuthUser = (session) => {
+      if (session?.user) {
+        const isUserAdmin = session.user.email === ADMIN_EMAIL;
+        setUser(session.user);
+        setIsAdmin(isUserAdmin);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+      setLoading(false);
+    };
 
-  const handleLogout = () => {
-    setUser(null);
-    supabase.auth.signOut();
-  };
+    const getInitialSession = async () => {
+      setLoading(true);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        setAuthUser(session);
+      } catch {
+        setAuthError("Errore di connessione al servizio di autenticazione.");
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setAuthUser(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 50 }}>Caricamento stato utente...</div>;
+  if (authError) return <div style={{ textAlign: 'center', padding: 50, color: 'red' }}>Errore di Autenticazione: {authError}</div>;
 
   return (
-    <Router>
-      {!user ? (
-        <Routes>
-          <Route path="*" element={<LoginWrapper onLogin={setUser} />} />
-        </Routes>
-      ) : (
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardWrapper
-                user={user}
-                isAdmin={isAdmin}
-                setUser={setUser}
-                onLogout={handleLogout}
-              />
-            }
-          />
-          <Route path="/prenotazioni" element={<Prenotazioni user={user} />} />
-          <Route
-            path="/eventi"
-            element={<EventiTornei user={user} isAdmin={isAdmin} />}
-          />
-          <Route path="/marketplace" element={<Marketplace user={user} />} />
-          <Route
-            path="/profilo"
-            element={<Profilo user={user} onLogout={handleLogout} />}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      )}
-    </Router>
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
+      </Route>
+      <Route path="/dashboard/*" element={
+        <ProtectedRoute user={user}>
+          <DashboardWrapper user={user} isAdmin={isAdmin} onLogout={handleLogout} />
+        </ProtectedRoute>
+      }>
+        <Route index element={<DashboardOverview />} />
+        <Route path="profilo" element={<Profilo />} />
+        <Route path="prenotazioni" element={<Prenotazioni />} />
+        <Route path="torneo" element={<TournamentDashboard />} />
+        <Route path="eventi" element={<EventiTornei />} />
+        <Route path="marketplace" element={<MarketplaceList />} />
+        <Route path="marketplace-gestione" element={<MarketplaceGestion />} />
+        <Route path="admin-eventi" element={
+          <AdminRoute user={user} isAdmin={isAdmin}>
+            <GestioneEventiAdmin />
+          </AdminRoute>
+        } />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
