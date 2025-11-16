@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function EventiAdmin() {
+  const [isAdmin, setIsAdmin] = useState(false);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
@@ -16,8 +17,23 @@ export default function EventiAdmin() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    checkIfAdmin();
     fetchEvents();
   }, []);
+
+  const checkIfAdmin = async () => {
+    const user = supabase.auth.user();
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    setIsAdmin(!!data);
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -99,81 +115,89 @@ export default function EventiAdmin() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Gestione Eventi e Tornei</h1>
-      <h3 className={`mb-6 ${editingEventId ? 'text-orange-600' : 'text-green-600'}`}>
-        {editingEventId ? 'Modifica Evento' : 'Crea Nuovo Evento'}
-      </h3>
 
-      {message && <p className="text-green-700 border border-green-700 p-3 rounded mb-6">{message}</p>}
-      {error && <p className="text-red-700 border border-red-700 p-3 rounded mb-6">{error}</p>}
+      {isAdmin ? (
+        <>
+          <h3 className={`mb-6 ${editingEventId ? 'text-orange-600' : 'text-green-600'}`}>
+            {editingEventId ? 'Modifica Evento' : 'Crea Nuovo Evento'}
+          </h3>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border rounded mb-10">
-        <input
-          type="text"
-          name="name"
-          value={form.name}
-          onChange={handleFormChange}
-          placeholder="Nome Evento"
-          required
-          className="p-3 border rounded col-span-full"
-        />
-        <input
-          type="date"
-          name="date"
-          value={form.date}
-          onChange={handleFormChange}
-          required
-          className="p-3 border rounded"
-        />
-        <input
-          type="number"
-          name="max_players"
-          value={form.max_players}
-          onChange={handleFormChange}
-          placeholder="Max Partecipanti"
-          required
-          min="1"
-          className="p-3 border rounded"
-        />
-        <input
-          type="number"
-          name="fee"
-          value={form.fee}
-          onChange={handleFormChange}
-          placeholder="Costo Iscrizione (€)"
-          required
-          min="0"
-          className="p-3 border rounded"
-        />
-        <textarea
-          name="description"
-          value={form.description}
-          onChange={handleFormChange}
-          placeholder="Descrizione dettagliata"
-          required
-          className="p-3 border rounded col-span-full"
-        />
+          {message && <p className="text-green-700 border border-green-700 p-3 rounded mb-6">{message}</p>}
+          {error && <p className="text-red-700 border border-red-700 p-3 rounded mb-6">{error}</p>}
 
-        <div className="col-span-full flex gap-4">
-          <button
-            type="submit"
-            className={`px-6 py-3 rounded text-white ${editingEventId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
-          >
-            {editingEventId ? 'Salva Modifiche Evento' : 'Crea Evento'}
-          </button>
-          {editingEventId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-6 py-3 rounded bg-gray-600 text-white hover:bg-gray-700"
-            >
-              Annulla Modifica
-            </button>
-          )}
-        </div>
-      </form>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border rounded mb-10">
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleFormChange}
+              placeholder="Nome Evento"
+              required
+              className="p-3 border rounded col-span-full"
+            />
+            <input
+              type="date"
+              name="date"
+              value={form.date}
+              onChange={handleFormChange}
+              required
+              className="p-3 border rounded"
+            />
+            <input
+              type="number"
+              name="max_players"
+              value={form.max_players}
+              onChange={handleFormChange}
+              placeholder="Max Partecipanti"
+              required
+              min="1"
+              className="p-3 border rounded"
+            />
+            <input
+              type="number"
+              name="fee"
+              value={form.fee}
+              onChange={handleFormChange}
+              placeholder="Costo Iscrizione (€)"
+              required
+              min="0"
+              className="p-3 border rounded"
+            />
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleFormChange}
+              placeholder="Descrizione dettagliata"
+              required
+              className="p-3 border rounded col-span-full"
+            />
+
+            <div className="col-span-full flex gap-4">
+              <button
+                type="submit"
+                className={`px-6 py-3 rounded text-white ${editingEventId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                {editingEventId ? 'Salva Modifiche Evento' : 'Crea Evento'}
+              </button>
+              {editingEventId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-6 py-3 rounded bg-gray-600 text-white hover:bg-gray-700"
+                >
+                  Annulla Modifica
+                </button>
+              )}
+            </div>
+          </form>
+        </>
+      ) : (
+        <p className="text-gray-700 font-semibold">Non sei autorizzato a creare o modificare eventi.</p>
+      )}
 
       <h3 className="text-2xl mb-4">Eventi Pubblicati ({events.length})</h3>
       <div className="flex flex-col gap-6">
+        {events.length === 0 && <p>Nessun evento pubblicato.</p>}
         {events.map(event => (
           <div
             key={event.id}
@@ -182,23 +206,25 @@ export default function EventiAdmin() {
             <div>
               <strong>{event.name}</strong> | Data: {new Date(event.date).toLocaleDateString()}
               <p className="text-sm text-gray-600 mt-1">
-                Iscrizione: €{event.fee} | Max: {event.max_players}
+                Iscrizione: €{event.fee} | Max partecipanti: {event.max_players}
               </p>
             </div>
-            <div>
-              <button
-                onClick={() => handleEdit(event)}
-                className="mr-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-              >
-                Modifica
-              </button>
-              <button
-                onClick={() => handleDelete(event.id)}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-              >
-                Elimina
-              </button>
-            </div>
+            {isAdmin && (
+              <div>
+                <button
+                  onClick={() => handleEdit(event)}
+                  className="mr-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                >
+                  Modifica
+                </button>
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                >
+                  Elimina
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
-
-// Layouts e Componenti di Base
-import PublicLayout from './components/PublicLayout';
-import DashboardWrapper from './components/DashboardWrapper';
+import { useSupabase } from './SupabaseContext';
+import PublicLayout from './PublicLayout';
 import Auth from './components/Auth';
+import DashboardWrapper from './components/DashboardWrapper';
 
-// Componenti Dashboard
-import DashboardOverview from './components/DashboardOverview';
-import Profilo from './components/Profilo';
-import Prenotazioni from './components/Prenotazioni';
-import TournamentDashboard from './components/TournamentDashboard';
+// Componenti reali da visualizzare nelle rotte figlie
 import EventiTornei from './components/EventiTornei';
-import MarketplaceList from './components/MarketplaceList';
-import MarketplaceGestion from './components/MarketplaceGestion';
+import Prenotazioni from './components/Prenotazioni';
+import Marketplace from './components/Marketplacelist';
+import Profilo from './components/Profilo';
+import HomePage from './components/HomePage';
 import GestioneEventiAdmin from './components/GestioneEventiAdmin';
 
 const ADMIN_EMAIL = 'giose.rizzi@gmail.com';
@@ -24,44 +20,37 @@ const ProtectedRoute = ({ user, children }) => {
   return children;
 };
 
-const AdminRoute = ({ user, isAdmin, children }) => {
-  if (!user || !isAdmin) return <Navigate to="/dashboard" replace />;
-  return children;
-};
-
 export default function App() {
+  const supabase = useSupabase();
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Funzione logout da poter passare a DashboardWrapper
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       setUser(null);
       setIsAdmin(false);
     } catch (error) {
-      console.error('Errore durante il logout:', error);
+      console.error('Errore durante il logout:', error.message);
     }
   };
 
-  // Forza logout automatico all'avvio
   useEffect(() => {
-    const forceLogout = async () => {
-      try {
-        await supabase.auth.signOut();
-      } catch (error) {
-        console.error('Errore durante logout automatico:', error);
-      }
+    // Forza logout all'avvio per mostrare pagina login
+    const forceLogoutAndReset = async () => {
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAdmin(false);
+      setLoading(false);
     };
-    forceLogout();
-  }, []);
+    forceLogoutAndReset();
 
-  useEffect(() => {
     const setAuthUser = (session) => {
       if (session?.user) {
-        const isUserAdmin = session.user.email === ADMIN_EMAIL;
+        const isUserAdmin = session.user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
         setUser(session.user);
         setIsAdmin(isUserAdmin);
       } else {
@@ -85,14 +74,12 @@ export default function App() {
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthUser(session);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   if (loading) return <div style={{ textAlign: 'center', padding: 50 }}>Caricamento stato utente...</div>;
   if (authError) return <div style={{ textAlign: 'center', padding: 50, color: 'red' }}>Errore di Autenticazione: {authError}</div>;
@@ -100,26 +87,19 @@ export default function App() {
   return (
     <Routes>
       <Route element={<PublicLayout />}>
-        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
+        <Route path="/" element={!user ? <Auth /> : <Navigate to="/dashboard" replace />} />
       </Route>
       <Route path="/dashboard/*" element={
         <ProtectedRoute user={user}>
           <DashboardWrapper user={user} isAdmin={isAdmin} onLogout={handleLogout} />
         </ProtectedRoute>
       }>
-        <Route index element={<DashboardOverview />} />
-        <Route path="profilo" element={<Profilo />} />
+        <Route index element={<HomePage />} />
         <Route path="prenotazioni" element={<Prenotazioni />} />
-        <Route path="torneo" element={<TournamentDashboard />} />
-        <Route path="eventi" element={<EventiTornei />} />
-        <Route path="marketplace" element={<MarketplaceList />} />
-        <Route path="marketplace-gestione" element={<MarketplaceGestion />} />
-        <Route path="admin-eventi" element={
-          <AdminRoute user={user} isAdmin={isAdmin}>
-            <GestioneEventiAdmin />
-          </AdminRoute>
-        } />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="torneo" element={<EventiTornei isAdmin={isAdmin} />} />
+        <Route path="marketplace" element={<Marketplace />} />
+        <Route path="profilo" element={<Profilo />} />
+        <Route path="gestione-eventi" element={<GestioneEventiAdmin />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

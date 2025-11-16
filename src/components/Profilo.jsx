@@ -6,6 +6,7 @@ export default function Profilo({ user }) {
   const [username, setUsername] = useState('');
   const [website, setWebsite] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [phone, setPhone] = useState(''); // nuovo campo
   const [message, setMessage] = useState('');
 
   const userId = user?.id;
@@ -24,7 +25,7 @@ export default function Profilo({ user }) {
     try {
       const { data, error, status } = await supabase
         .from('profiles')
-        .select(`username, website, avatar_url`)
+        .select(`username, website, avatar_url, phone`)
         .eq('id', userId)
         .single();
 
@@ -36,6 +37,7 @@ export default function Profilo({ user }) {
         setUsername(data.username);
         setWebsite(data.website);
         setAvatarUrl(data.avatar_url);
+        setPhone(data.phone); // recupera nuova proprietà
       }
     } catch (error) {
       setMessage('Errore nel caricamento del profilo. Potrebbe non esistere.');
@@ -54,6 +56,7 @@ export default function Profilo({ user }) {
       username,
       website,
       avatar_url: avatarUrl,
+      phone, // salva nuova proprietà
       updated_at: new Date().toISOString(),
     };
 
@@ -140,6 +143,19 @@ export default function Profilo({ user }) {
           {avatarUrl && (
             <img alt="Avatar Preview" src={avatarUrl} className="mt-3 w-24 h-24 rounded-full object-cover" />
           )}
+        </div>
+
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            Telefono
+          </label>
+          <input
+            id="phone"
+            type="tel"
+            value={phone || ''}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded"
+          />
         </div>
 
         <button

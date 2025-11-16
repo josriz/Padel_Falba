@@ -12,14 +12,10 @@ export default function TournamentDashboard({ isAdmin }) {
     const rounds = {};
     allMatches.forEach(match => {
       const roundName = `round${match.round_number}`;
-      if (!rounds[roundName]) {
-        rounds[roundName] = [];
-      }
+      if (!rounds[roundName]) rounds[roundName] = [];
       rounds[roundName].push(match);
     });
-    const sortedKeys = Object.keys(rounds).sort((a, b) => {
-      return parseInt(a.replace('round', '')) - parseInt(b.replace('round', ''));
-    });
+    const sortedKeys = Object.keys(rounds).sort((a, b) => parseInt(a.replace('round', '')) - parseInt(b.replace('round', '')));
     const sortedRounds = {};
     sortedKeys.forEach(key => {
       rounds[key].sort((a, b) => (a.match_index || 0) - (b.match_index || 0));
@@ -87,7 +83,7 @@ export default function TournamentDashboard({ isAdmin }) {
         player_a_id: fieldToUpdate === "player_a_id" ? winnerId : null,
         player_b_id: fieldToUpdate === "player_b_id" ? winnerId : null,
       };
-      const { data, error: insertError } = await supabase.from("tournament_matches").insert(payload).select();
+      const { error: insertError } = await supabase.from("tournament_matches").insert(payload);
       if (insertError) console.error("Errore creazione match successivo:", insertError.message);
     } else {
       const { error: dbUpdateError } = await supabase.from("tournament_matches").update({ [fieldToUpdate]: winnerId }).eq("id", nextMatch.id);
@@ -120,7 +116,6 @@ export default function TournamentDashboard({ isAdmin }) {
     ));
     const { error } = await supabase.from("tournament_matches").update(updatePayload).eq("id", match.id);
     if (error) {
-      console.error("Errore updateMatchScore:", error.message);
       setMessage("❌ Errore nel salvataggio del punteggio.");
     } else {
       setMessage("Punteggio aggiornato!");

@@ -1,15 +1,18 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client'; // Uso API moderna per React18+
+import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
 import App from './App';
-import './index.css'; // Importa glissi CSS globali inclusi Tailwind
+import './styles/tailwind.css';
+import { SupabaseProvider } from './SupabaseContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
   <React.StrictMode>
-    <Router>
-      <App />
-    </Router>
+    <SupabaseProvider>
+      <Router>
+        <App />
+      </Router>
+    </SupabaseProvider>
   </React.StrictMode>
 );
