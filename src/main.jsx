@@ -1,18 +1,11 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router } from 'react-router-dom';
-import App from './App';
-import './styles/tailwind.css';
-import { SupabaseProvider } from './SupabaseContext';
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import "./index.css";  // ← AGGIUNGI QUESTA RIGA!
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-
-root.render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <SupabaseProvider>
-      <Router>
-        <App />
-      </Router>
-    </SupabaseProvider>
+    <App />
   </React.StrictMode>
 );

@@ -1,18 +1,17 @@
-import React, { createContext, useContext } from 'react';
-import { supabase } from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
-const SupabaseContext = createContext(null);
+// Le chiavi pubbliche vengono lette dalle variabili d'ambiente del client.
+// Utilizziamo un fallback generico per coprire diversi bundler (Vite, CRA).
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-export const SupabaseProvider = ({ children }) => {
-  return (
-    <SupabaseContext.Provider value={supabase}>
-      {children}
-    </SupabaseContext.Provider>
-  );
-};
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("FATAL ERROR: Supabase URL o Anon Key mancanti. Controlla il tuo file .env e le variabili d'ambiente.");
+  throw new Error("Supabase client cannot be initialized due to missing keys.");
+}
 
-export const useSupabase = () => {
-  const context = useContext(SupabaseContext);
-  if (!context) throw new Error('useSupabase deve essere usato dentro SupabaseProvider');
-  return context;
-};
+// Crea il client Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export const SUPABASE_URL = supabaseUrl;
+export const SUPABASE_ANON_KEY = supabaseAnonKey;

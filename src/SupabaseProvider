@@ -1,0 +1,11 @@
+export const SupabaseProvider = ({ children }) => {
+    console.log("Supabase client in context:", supabase); // 🔹 debug
+
+    const contextValue = { supabase };
+    return (
+        <SupabaseContext.Provider value={contextValue}>
+            {children}
+        </SupabaseContext.Provider>
+    );
+};
+console.log("Supabase client in context:", supabase);

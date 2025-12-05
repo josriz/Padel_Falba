@@ -1,0 +1,290 @@
+// src/App.jsx - VERSIONE COMPLETA CON LOGIN INTEGRATO
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import AuthProvider, { useAuth } from './context/AuthProvider';
+import TournamentList from './components/TournamentList';
+import TournamentDetail from './components/TournamentDetail';
+import TournamentSignup from './components/TournamentSignup';
+import TournamentBoard from './components/TournamentBoard';
+import TournamentPlayers from './components/TournamentPlayers';
+import TournamentAdminPanel from './components/TournamentAdminPanel';
+import TournamentListAndAdmin from './components/TournamentListAndAdmin';
+import TournamentBracketEditable from './components/TournamentBracketEditable';
+import { supabase } from './supabaseClient';
+import { ShieldAlert, Users, Trophy, Loader2, Menu, LogOut, User, Mail } from 'lucide-react';
+
+function Navbar({ onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isAdmin } = useAuth();
+
+  return (
+    <header className="fixed top-0 left-0 right-0 bg-white shadow-lg z-50">
+      <div className="flex justify-between items-center p-4 max-w-7xl mx-auto">
+        <h1 className="font-black text-2xl bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent">
+          🏓 PadelClub
+        </h1>
+        <button 
+          onClick={() => setMenuOpen(!menuOpen)} 
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        
+        {user && (
+          <div className="hidden md:flex items-center space-x-4">
+            <span className="text-sm text-gray-600">Ciao, {user.email}</span>
+            <button 
+              onClick={onLogout}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {menuOpen && (
+        <nav className="md:hidden absolute top-full right-4 w-64 bg-white border rounded-xl shadow-2xl">
+          <div className="p-4 border-b">
+            <div className="flex items-center space-x-3">
+              <User className="w-10 h-10 bg-blue-100 rounded-full p-2" />
+              <div>
+                <p className="font-semibold">{user?.email}</p>
+                <p className="text-xs text-gray-500">{isAdmin ? 'Admin' : 'Utente'}</p>
+              </div>
+            </div>
+          </div>
+          <ul className="py-2">
+            <li><a href="/" className="block px-4 py-3 hover:bg-gray-100">🏠 Home</a></li>
+            <li><a href="/tornei" className="block px-4 py-3 hover:bg-gray-100">🏆 Tornei</a></li>
+            {isAdmin && (
+              <>
+                <li><a href="/admin" className="block px-4 py-3 hover:bg-gray-100">⚙️ Admin Panel</a></li>
+                <li><a href="/admin/tornei" className="block px-4 py-3 hover:bg-gray-100">📋 Gestione Tornei</a></li>
+              </>
+            )}
+            <li>
+              <button 
+                onClick={() => { onLogout(); setMenuOpen(false); }}
+                className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 text-red-600"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Logout</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
+      )}
+    </header>
+  );
+}
+
+function LoginPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
+
+  const handleEmailLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 flex items-center justify-center p-4">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-12 max-w-md w-full mx-4">
+        <div className="text-center mb-12">
+          <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-500" />
+          <h1 className="text-4xl font-black bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+            Benvenuto in PadelClub
+          </h1>
+          <p className="text-xl text-gray-600">Accedi con il tuo account Google</p>
+        </div>
+        
+        <button
+          onClick={handleEmailLogin}
+          className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-gray-200 hover:border-gray-300 hover:shadow-xl rounded-2xl p-6 font-semibold text-lg transition-all duration-300 hover:scale-[1.02]"
+        >
+          <Mail className="w-6 h-6 text-red-500" />
+          <span>Accedi con Google</span>
+        </button>
+        
+        <p className="text-center text-sm text-gray-500 mt-8">
+          Solo per utenti registrati • giose.rizzi@gmail.com = Admin
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { user, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin mr-2 text-blue-600" />
+        <span>Caricamento...</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center bg-gradient-to-br from-red-500 to-orange-600">
+        <div className="bg-white p-12 rounded-4xl shadow-2xl max-w-md w-full mx-4 text-center">
+          <ShieldAlert className="w-20 h-20 text-red-600 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Accesso Negato</h2>
+          <p className="text-gray-600 mb-8">Solo gli amministratori possono accedere</p>
+          <a href="/" className="bg-gray-600 text-white px-8 py-4 rounded-3xl font-bold hover:shadow-xl transition-all">
+            Torna Home
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
+
+// Wrapper Components
+const Home = ({ tournaments }) => (
+  <div className="pt-20 max-w-7xl mx-auto p-8">
+    <div className="text-center mb-20">
+      <h1 className="text-7xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-yellow-500 bg-clip-text text-transparent mb-8">
+        🏓 PadelClub Tornei
+      </h1>
+      <p className="text-3xl text-gray-600 font-semibold max-w-2xl mx-auto">
+        Gestione completa tornei padel con iscrizioni, tabelloni e amministrazione avanzata
+      </p>
+    </div>
+    <TournamentList tournaments={tournaments} />
+  </div>
+);
+
+const TournamentDetailWrapper = () => {
+  const { id } = useParams();
+  return (
+    <div className="pt-20 max-w-4xl mx-auto p-8">
+      <TournamentDetail tournamentId={id} />
+      <div className="grid md:grid-cols-2 gap-8 mt-12">
+        <TournamentPlayers tournamentId={id} />
+        <TournamentSignup tournamentId={id} />
+      </div>
+    </div>
+  );
+};
+
+const TournamentSignupWrapper = () => {
+  const { id } = useParams();
+  return <div className="pt-20 max-w-2xl mx-auto p-8"><TournamentSignup tournamentId={id} /></div>;
+};
+
+const TournamentBoardWrapper = () => {
+  const { id } = useParams();
+  return <div className="pt-20 max-w-6xl mx-auto p-8"><TournamentBoard tournamentId={id} /></div>;
+};
+
+const TournamentBracketEditableWrapper = () => {
+  const { id } = useParams();
+  return <div className="pt-20 max-w-6xl mx-auto p-8"><TournamentBracketEditable tournamentId={id} /></div>;
+};
+
+function AppContent() {
+  const [tournaments, setTournaments] = useState([]);
+  const { setUser } = useAuth();
+
+  useEffect(() => {
+    supabase
+      .from('tournaments')
+      .select('*')
+      .order('start_date')
+      .then(({ data }) => setTournaments(data || []));
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/auth/login';
+  };
+
+  return (
+    <>
+      <Navbar onLogout={handleLogout} />
+      <main>
+        <Routes>
+          {/* ✅ PAGINE PUBBLICHE */}
+          <Route path="/auth/login" element={<LoginPage />} />
+          <Route path="/" element={<Home tournaments={tournaments} />} />
+          <Route path="/tornei" element={<TournamentList tournaments={tournaments} />} />
+          
+          {/* ✅ UTENTE STANDARD */}
+          <Route path="/torneo/:id" element={
+            <ProtectedRoute>
+              <TournamentDetailWrapper />
+            </ProtectedRoute>
+          } />
+          <Route path="/torneo/:id/iscriviti" element={
+            <ProtectedRoute>
+              <TournamentSignupWrapper />
+            </ProtectedRoute>
+          } />
+          <Route path="/torneo/:id/tabellone" element={
+            <ProtectedRoute>
+              <TournamentBoardWrapper />
+            </ProtectedRoute>
+          } />
+          
+          {/* ✅ ADMIN SOLO */}
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly>
+              <TournamentAdminPanel />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/tornei" element={
+            <ProtectedRoute adminOnly>
+              <TournamentListAndAdmin tournaments={tournaments} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/bracket/:id" element={
+            <ProtectedRoute adminOnly>
+              <TournamentBracketEditableWrapper />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;

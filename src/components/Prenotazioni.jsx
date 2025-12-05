@@ -1,245 +1,162 @@
+
+// src/components/Prenotazioni.jsx - ✅ LAYOUT DASHBOARD COMPATTO
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../supabaseClient';
+import { Calendar, Check, Plus, Loader2, AlertCircle } from 'lucide-react';
 
-export default function Prenotazioni({ user }) {
-  const [bookings, setBookings] = useState([]);
+export default function Prenotazioni() {
+  const { user } = useAuth();
+  const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    campo_id: '',
-    data_ora: '',
-    durata_min: 60,
-    sfidante_email: '',
-    phone: '',
-    livello: 'principiante',
-    tipo_partita: 'allenamento',
-    note: '',
-    stato: 'confermata',
-    altro_campo: '',
-  });
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState(null);
 
-  const userId = user?.id;
-
+  // Recupera slot prenotazioni dal DB
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    fetchBookings();
-  }, [userId]);
+    const fetchSlots = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from("bookings")
+          .select("*")
+          .order("date", { ascending: true });
+          
+        if (error) throw error;
+        setSlots(data || []);
+      } catch (err) {
+        console.error("Errore caricamento slot:", err.message);
+        setError("Errore nel caricamento delle prenotazioni");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSlots();
+  }, []);
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  // Prenota uno slot
+  const handleBooking = async (slotId) => {
     try {
-      const { data, error } = await supabase
-        .from('prenotazioni')
-        .select(`*, campi ( nome )`)
-        .or(`user_id.eq.${userId},sfidante_id.eq.${userId}`)
-        .gte('data_ora', new Date().toISOString())
-        .order('data_ora', { ascending: true });
+      const { error } = await supabase.from("bookings").update({
+        user_id: user.id
+      }).eq("id", slotId).is("user_id", null);
 
       if (error) throw error;
-      setBookings(data || []);
-      setMessage('');
-    } catch {
-      setMessage('Errore nel caricamento delle tue prenotazioni.');
-    } finally {
-      setLoading(false);
+      alert("✅ Prenotazione confermata!");
+      // Aggiorna la lista localmente
+      setSlots(slots.map(slot => slot.id === slotId ? { ...slot, user_id: user.id } : slot));
+    } catch (err) {
+      console.error("Errore prenotazione:", err.message);
+      alert("❌ Slot già prenotato o errore di rete.");
     }
   };
 
-  const handleBooking = async (e) => {
-    e.preventDefault();
-    setMessage('');
-
-    if (!userId) {
-      setMessage('Devi essere loggato per prenotare.');
-      return;
-    }
-
-    let sfidanteId = null;
-    if (form.sfidante_email) {
-      const { data: sfidanteData, error: sfidanteError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', form.sfidante_email)
-        .single();
-
-      if (sfidanteError || !sfidanteData) {
-        setMessage('Email sfidante non trovata o non registrata.');
-        return;
-      }
-      sfidanteId = sfidanteData.id;
-    }
-
-    const newBooking = {
-      user_id: userId,
-      campo_id: form.campo_id,
-      data_ora: form.data_ora,
-      durata_min: form.durata_min,
-      sfidante_id: sfidanteId,
-      stato: form.stato,
-      phone: form.phone,
-      livello: form.livello,
-      tipo_partita: form.tipo_partita,
-      note: form.note,
-      altro_campo: form.altro_campo,
-    };
-
-    const { error } = await supabase.from('prenotazioni').insert([newBooking]);
-
-    if (!error) {
-      setMessage('✅ Prenotazione effettuata con successo!');
-      setForm({
-        campo_id: '',
-        data_ora: '',
-        durata_min: 60,
-        sfidante_email: '',
-        phone: '',
-        livello: 'principiante',
-        tipo_partita: 'allenamento',
-        note: '',
-        stato: 'confermata',
-        altro_campo: '',
-      });
-      fetchBookings();
-    } else {
-      setMessage(`❌ Errore prenotazione: ${error.message}. Il campo potrebbe essere già occupato.`);
-    }
-  };
-
-  if (loading)
-    return <div className="p-6 text-center text-gray-600">Caricamento prenotazioni...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 flex items-center justify-center py-12 px-6">
+        <div className="text-center bg-white p-12 rounded-xl shadow-sm border border-gray-200">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-6 text-blue-600" />
+          <p className="text-xl text-gray-600 font-semibold">Caricamento prenotazioni...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 border border-gray-300 rounded-lg">
-      <h2 className="text-2xl font-semibold mb-4">🎾 Nuova Prenotazione Campo</h2>
-
-      {message && (
-        <p
-          className={`mb-6 p-3 rounded ${
-            message.startsWith('✅')
-              ? 'bg-green-100 text-green-700 border border-green-400'
-              : 'bg-red-100 text-red-700 border border-red-400'
-          }`}
-        >
-          {message}
-        </p>
-      )}
-
-      <form onSubmit={handleBooking} className="space-y-4">
-        {/* select campo con 10 opzioni */}
-        <div>
-          <label htmlFor="campo_id" className="block mb-1 font-medium">Campo:</label>
-          <select
-            id="campo_id"
-            value={form.campo_id}
-            onChange={(e) => setForm({ ...form, campo_id: e.target.value })}
-            required
-            className="w-full p-3 border border-gray-300 rounded"
-          >
-            <option value="">Seleziona Campo</option>
-            <option value="1">Campo 1 (Standard)</option>
-            <option value="2">Campo 2 (Premium)</option>
-            <option value="3">Campo 3 (Indoor)</option>
-            <option value="4">Campo 4 (Outdoor)</option>
-            <option value="5">Campo 5 (VIP)</option>
-            <option value="6">Campo 6 (Junior)</option>
-            <option value="7">Campo 7 (Senior)</option>
-            <option value="8">Campo 8 (Practice)</option>
-            <option value="9">Campo 9 (Tournament)</option>
-            <option value="10">Campo 10 (Special)</option>
-          </select>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
+      <div className="p-6 max-w-6xl mx-auto space-y-8">
+        {/* ✅ HEADER IDENTICO DASHBOARD */}
+        <div className="text-center">
+          <div className="w-20 h-20 bg-emerald-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
+            <Calendar className="w-9 h-9 text-emerald-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Prenotazioni</h1>
+          <p className="text-lg text-gray-600 max-w-md mx-auto leading-relaxed">
+            Gestisci le tue prenotazioni campo padel
+          </p>
         </div>
 
-        {/* Altri campi */}
-        <div>
-          <label htmlFor="data_ora" className="block mb-1 font-medium">Data e Ora:</label>
-          <input type="datetime-local" id="data_ora"
-            value={form.data_ora} onChange={(e) => setForm({ ...form, data_ora: e.target.value })}
-            required className="w-full p-3 border border-gray-300 rounded" />
-        </div>
-
-        <div>
-          <label htmlFor="durata_min" className="block mb-1 font-medium">Durata (minuti):</label>
-          <select id="durata_min"
-            value={form.durata_min} onChange={(e) => setForm({ ...form, durata_min: parseInt(e.target.value) })}
-            required className="w-full p-3 border border-gray-300 rounded">
-            <option value="60">60 minuti</option>
-            <option value="90">90 minuti</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="sfidante_email" className="block mb-1 font-medium">Email Sfidante (Opzionale):</label>
-          <input type="email" id="sfidante_email" placeholder="email@sfidante.it"
-            value={form.sfidante_email} onChange={(e) => setForm({ ...form, sfidante_email: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded" />
-        </div>
-
-        <div>
-          <label htmlFor="phone" className="block mb-1 font-medium">Telefono contatto</label>
-          <input type="tel" id="phone"
-            value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded" />
-        </div>
-
-        <div>
-          <label htmlFor="livello" className="block mb-1 font-medium">Livello di gioco</label>
-          <select id="livello" value={form.livello} onChange={(e) => setForm({ ...form, livello: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded">
-            <option value="principiante">Principiante</option>
-            <option value="intermedio">Intermedio</option>
-            <option value="avanzato">Avanzato</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="tipo_partita" className="block mb-1 font-medium">Tipo di partita</label>
-          <select id="tipo_partita" value={form.tipo_partita} onChange={(e) => setForm({ ...form, tipo_partita: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded">
-            <option value="allenamento">Allenamento</option>
-            <option value="torneo">Torneo</option>
-            <option value="amichevole">Amichevole</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="note" className="block mb-1 font-medium">Note</label>
-          <textarea id="note" rows={3}
-            value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded" />
-        </div>
-
-        <div>
-          <label htmlFor="altro_campo" className="block mb-1 font-medium">Altro Campo</label>
-          <input type="text" id="altro_campo"
-            value={form.altro_campo} onChange={(e) => setForm({ ...form, altro_campo: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded" />
-        </div>
-
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded cursor-pointer">
-          Prenota Ora
-        </button>
-      </form>
-
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">Le Tue Prenotazioni Future ({bookings.length})</h3>
-        {bookings.length === 0 ? (
-          <p>Nessuna prenotazione futura trovata.</p>
-        ) : (
-          <ul className="space-y-4">
-            {bookings.map((b) => (
-              <li key={b.id} className="p-4 border border-gray-300 rounded shadow-sm bg-white">
-                <p><strong>Campo:</strong> {b.campi?.nome || 'N/D'}</p>
-                <p><strong>Quando:</strong> {new Date(b.data_ora).toLocaleString('it-IT')}</p>
-                <p><strong>Durata:</strong> {b.durata_min} min</p>
-                <p><strong>Stato:</strong> {b.stato}</p>
-                {b.sfidante_id && <p>Sfida con: {b.sfidante_email || 'Altro Utente'}</p>}
-              </li>
-            ))}
-          </ul>
+        {/* ✅ ERROR STATE */}
+        {error && (
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-red-200 max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <h3 className="font-bold text-red-800 text-lg">Errore</h3>
+            </div>
+            <p className="text-red-700">{error}</p>
+          </div>
         )}
+
+        {/* ✅ TABELLA COMPATTA */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-emerald-50 px-6 py-4 border-b">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-600" />
+              Slot Disponibili
+            </h2>
+          </div>
+          
+          {slots.length === 0 ? (
+            <div className="p-12 text-center">
+              <Calendar className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Nessuna prenotazione disponibile</h3>
+              <p className="text-gray-600">Torna presto per nuovi slot!</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Data</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Orario</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Campo</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Stato</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Azione</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {slots.map((slot) => (
+                    <tr key={slot.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {new Date(slot.date).toLocaleDateString('it-IT')}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{slot.time_slot}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                          Campo {slot.court_id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {slot.user_id ? (
+                          <span className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
+                            <Check className="w-4 h-4" />
+                            Prenotato
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
+                            Disponibile
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {!slot.user_id && user && (
+                          <button
+                            onClick={() => handleBooking(slot.id)}
+                            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all whitespace-nowrap"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Prenota
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
