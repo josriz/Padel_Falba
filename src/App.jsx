@@ -10,6 +10,7 @@ import MarketplaceList from './components/MarketplaceList';
 import MarketplaceGestion from './components/MarketplaceGestion';
 import TournamentList from './components/TournamentList';
 import TournamentDetailPage from './components/TournamentDetailPage';
+import NotFound from './components/NotFound'; // ✅ AGGIUNTO!
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, isAdmin } = useAuth();
@@ -56,7 +57,11 @@ function AppContent() {
             <TournamentDetailPage />
           </ProtectedRoute>
         } />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={
+          <ProtectedRoute>
+            <NotFound />
+          </ProtectedRoute>
+        } />
       </Routes>
     </div>
   );

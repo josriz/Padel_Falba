@@ -1,7 +1,7 @@
-// src/App.jsx
+// src/App.jsx - ✅ CORRETTO import AuthProvider
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AuthProvider, { useAuth } from './context/AuthProvider';
+import AuthProvider, { useAuth } from './context/AuthProvider'; // ✅ CORRETTO!
 
 // Componenti principali
 import LoginPages from './components/LoginPages';
@@ -9,7 +9,9 @@ import Dashboard from './components/Dashboard';
 import MarketplaceList from './components/MarketplaceList';
 import MarketplaceGestion from './components/MarketplaceGestion';
 import TournamentList from './components/TournamentList';
-import TournamentDetailPage from './components/TournamentDetailPage'; // ← percorso corretto
+import TournamentDetailPage from './components/TournamentDetailPage';
+import NotFound from './components/NotFound';
+
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, isAdmin } = useAuth();
@@ -30,67 +32,37 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-white">
       <Routes>
-
-        {/* LOGIN PUBBLICO */}
         <Route path="/login" element={<LoginPages />} />
-
-        {/* DASHBOARD PROTETTA */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* MARKETPLACE UTENTI LOGGATI */}
-        <Route
-          path="/marketplace"
-          element={
-            <ProtectedRoute>
-              <MarketplaceList />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* GESTIONE MARKETPLACE SOLO ADMIN */}
-        <Route
-          path="/marketplace/gestione"
-          element={
-            <ProtectedRoute adminOnly>
-              <MarketplaceGestion />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* LISTA TORNEI */}
-        <Route
-          path="/tornei"
-          element={
-            <ProtectedRoute>
-              <TournamentList />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* DETTAGLIO SINGOLO TORNEO - ADMIN */}
-        <Route
-          path="/torneo/:id"
-          element={
-            <ProtectedRoute adminOnly>
-              <TournamentDetailPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* REDIRECT PER ROTTE NON TROVATE */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-
-      </Routes>
-    </div>
-  );
-}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace" element={
+          <ProtectedRoute>
+            <MarketplaceList />
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace/gestione" element={
+          <ProtectedRoute adminOnly>
+            <MarketplaceGestion />
+          </ProtectedRoute>
+        } />
+        <Route path="/tornei" element={
+          <ProtectedRoute>
+            <TournamentList />
+          </ProtectedRoute>
+        } />
+        <Route path="/torneo/:id" element={
+          <ProtectedRoute adminOnly>
+            <TournamentDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={
+          <ProtectedRoute>
+            <NotFound />
+          </ProtectedRoute>
+        } />
 
 export default function App() {
   return (
