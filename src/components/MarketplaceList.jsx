@@ -1,4 +1,4 @@
-// src/components/MarketplaceList.jsx - ✅ AGGIUNGI + CONTATTA (WHATSAPP) + 3 ARTICOLI VISIBILI!
+﻿// src/components/MarketplaceList.jsx - ✅ AGGIUNGI + CONTATTA (WHATSAPP) + 3 ARTICOLI VISIBILI!
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthProvider';
@@ -94,7 +94,7 @@ export default function MarketplaceList() {
   );
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6 md:space-y-8 bg-white min-h-screen">
+    <div className="p-4 md:p-6 max-w-full sm:max-w-4xl md:max-w-6xl lg:max-w-7xl mx-auto space-y-6 md:space-y-8 bg-white min-h-[90vh]">
       {/* HEADER + BUTTON AGGIUNGI */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="text-center lg:text-left flex-1">
@@ -109,7 +109,7 @@ export default function MarketplaceList() {
         
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 mx-auto lg:ml-0 text-sm md:text-base whitespace-nowrap"
+          className="px-4 sm:px-6 md:px-8 py-3 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 mx-auto lg:ml-0 text-sm md:text-base whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           Aggiungi articolo
@@ -144,9 +144,9 @@ export default function MarketplaceList() {
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="text-center py-16 md:py-20 bg-white rounded-2xl shadow-sm border border-gray-200">
-          <ShoppingBag className="w-16 h-16 md:w-20 md:h-20 text-gray-400 mx-auto mb-6" />
+          <ShoppingBag className="w-16 h-16 md:w-20 md:h-20 text-gray-400 mx-auto mb-2 sm:mb-4 md:mb-6" />
           <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">Nessun articolo trovato</h3>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 mb-3 sm:mb-4 md:mb-2 sm:mb-4 md:mb-6 lg:mb-8">
             {search ? 'Prova con un termine diverso' : 'Sii il primo a mettere in vendita!'}
           </p>
           <button
@@ -220,8 +220,8 @@ export default function MarketplaceList() {
       {/* MODAL AGGIUNGI ARTICOLO */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-2xl p-6 md:p-3 sm:p-4 md:p-6 lg:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between mb-2 sm:mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">Aggiungi Articolo</h2>
               <button 
                 onClick={() => setShowAddModal(false)} 
@@ -301,3 +301,4 @@ export default function MarketplaceList() {
     </div>
   );
 }
+

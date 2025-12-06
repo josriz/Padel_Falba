@@ -114,11 +114,11 @@ export default function MarketplaceGestion() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
-      <div className="p-6 max-w-6xl mx-auto space-y-8">
+    <div className="min-h-[90vh] bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
+      <div className="p-6 max-w-full sm:max-w-4xl md:max-w-6xl lg:max-w-7xl mx-auto space-y-8">
         {/* ✅ HEADER IDENTICO DASHBOARD */}
         <div className="text-center">
-          <div className="w-20 h-20 bg-emerald-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-emerald-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
             <ShoppingBag className="w-9 h-9 text-emerald-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Marketplace</h1>
@@ -196,7 +196,7 @@ export default function MarketplaceGestion() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 min-w-[140px] py-3 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 min-w-[140px] py-3 px-4 sm:px-6 md:px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -209,7 +209,7 @@ export default function MarketplaceGestion() {
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-xl shadow-sm border border-gray-200 transition-all"
+                  className="py-3 px-4 sm:px-6 md:px-8 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-xl shadow-sm border border-gray-200 transition-all"
                 >
                   Annulla
                 </button>
@@ -220,7 +220,7 @@ export default function MarketplaceGestion() {
 
         {/* ✅ LISTA ANNUNCI COMPATTA */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 sm:mb-4 md:mb-6 flex items-center gap-3">
             <ShoppingBag className="w-7 h-7 text-emerald-600" />
             I tuoi annunci ({userItems.length})
           </h2>
@@ -233,7 +233,7 @@ export default function MarketplaceGestion() {
             </div>
           ) : userItems.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-              <ShoppingBag className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+              <ShoppingBag className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-gray-400 mx-auto mb-2 sm:mb-4 md:mb-6" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">Nessun annuncio</h3>
               <p className="text-gray-600">Pubblica il tuo primo annuncio!</p>
             </div>
@@ -290,3 +290,4 @@ export default function MarketplaceGestion() {
     </div>
   );
 }
+

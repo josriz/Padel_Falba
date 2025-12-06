@@ -1,4 +1,4 @@
-// src/components/TournamentDetailPage.jsx - ✅ LAYOUT DASHBOARD COMPATTO ID=3
+﻿// src/components/TournamentDetailPage.jsx - ✅ LAYOUT DASHBOARD COMPATTO ID=3
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -56,7 +56,7 @@ function HamburgerMenu({ isOpen, isAdmin, onClose }) {
 function TournamentHeader({ tournamentName, matchesCount, isAdmin, onMenuToggle }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2 sm:mb-4 md:mb-6">
         <button onClick={onMenuToggle} className="p-3 hover:bg-gray-50 rounded-xl transition-all">
           <Menu className="w-6 h-6 text-gray-700" />
         </button>
@@ -120,7 +120,7 @@ function TournamentPlayers({ tournamentId }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="bg-gray-50 px-6 py-3 border-b">
+      <div className="bg-gray-50 px-4 sm:px-6 md:px-8 py-3 border-b">
         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           <Users className="w-5 h-5 text-blue-600" />
           Iscritti ({players.length})
@@ -130,8 +130,8 @@ function TournamentPlayers({ tournamentId }) {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-100">Giocatore</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-100">Email</th>
+              <th className="px-4 sm:px-6 md:px-8 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-100">Giocatore</th>
+              <th className="px-4 sm:px-6 md:px-8 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-100">Email</th>
             </tr>
           </thead>
           <tbody>
@@ -139,14 +139,14 @@ function TournamentPlayers({ tournamentId }) {
               const user = player.users || {};
               return (
                 <tr key={player.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{user.name || user.email || 'N/D'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{user.email || '-'}</td>
+                  <td className="px-4 sm:px-6 md:px-8 py-4 font-medium text-gray-900">{user.name || user.email || 'N/D'}</td>
+                  <td className="px-4 sm:px-6 md:px-8 py-4 text-sm text-gray-600">{user.email || '-'}</td>
                 </tr>
               );
             })}
             {players.length === 0 && (
               <tr>
-                <td colSpan="2" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="2" className="px-4 sm:px-6 md:px-8 py-4 sm:py-8 md:py-12 text-center text-gray-500">
                   Nessun iscritto
                 </td>
               </tr>
@@ -162,7 +162,7 @@ function TournamentPlayers({ tournamentId }) {
 function TournamentBracket({ matches = [] }) {
   if (!matches.length) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
+      <div className="bg-white rounded-xl shadow-sm border p-3 sm:p-4 md:p-6 lg:p-8 text-center">
         <Trophy className="w-14 h-14 text-gray-300 mx-auto mb-4" />
         <h3 className="text-lg font-bold text-gray-500 mb-1">Tabellone vuoto</h3>
         <p className="text-sm text-gray-400">Nessuna partita programmata</p>
@@ -177,7 +177,7 @@ function TournamentBracket({ matches = [] }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="bg-gray-50 px-6 py-3 border-b">
+      <div className="bg-gray-50 px-4 sm:px-6 md:px-8 py-3 border-b">
         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 justify-center">
           <Trophy className="w-5 h-5 text-yellow-600" />
           Tabellone ({matches.length} partite)
@@ -256,10 +256,10 @@ export default function TournamentDetailPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
+    <div className="min-h-[90vh] bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
       <HamburgerMenu isOpen={menuOpen} isAdmin={isAdmin} onClose={() => setMenuOpen(false)} />
 
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-6 max-w-full sm:max-w-4xl md:max-w-6xl lg:max-w-7xl mx-auto space-y-6">
         <TournamentHeader 
           tournamentName={tournamentName} 
           matchesCount={matches.length} 
@@ -283,3 +283,4 @@ export default function TournamentDetailPage() {
     </div>
   );
 }
+
