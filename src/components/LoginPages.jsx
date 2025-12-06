@@ -1,4 +1,4 @@
-// src/components/LoginPages.jsx - ✅ TUTTE RICHIESTE + BIANCO PURO!
+// src/components/LoginPages.jsx - ✅ TUTTE RICHIESTE + BIANCO PURO + LOGO RESPONSIVE!
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -120,9 +120,14 @@ const LoginPages = () => {
       {/* ✅ SFONDO BIANCO PURO - NO CONTORNI/OMBRE */}
       <div className="bg-white p-6 max-w-md w-full">
         
-        {/* ✅ LOGO + "by Claudio Falba" NERO CORSIVO GRASSETTO */}
+        {/* ✅ LOGO RESPONSIVE MOBILE + "by Claudio Falba" NERO CORSIVO GRASSETTO */}
         <div className="text-center mb-6 pt-8">
-          <img src="/logo.png" alt="CIEFFE Padel" className="mx-auto w-20 h-20 mb-2" />
+          {/* 🎨 LOGO GRANDE RESPONSIVE */}
+          <img 
+            src="/logo.png" 
+            alt="CIEFFE Padel" 
+            className="mx-auto w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 mb-4 shadow-lg rounded-xl hover:scale-105 transition-transform duration-200" 
+          />
           
           {/* ✅ NERO + GRASSETTO + CORSIVO SOTTO LOGO */}
           <p className="text-sm font-bold italic text-gray-900 tracking-wide mb-4 drop-shadow-sm">
