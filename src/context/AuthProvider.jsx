@@ -1,4 +1,4 @@
-// src/context/AuthProvider.jsx - ✅ SUPERADMIN + LOGOUT DEFINITIVO!
+// src/context/AuthProvider.jsx - WEB/PRODUZIONE BULLET-PROOF (locale + produzione)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -15,25 +15,18 @@ export default function AuthProvider({ children }) {
   const [role, setRole] = useState('guest');
   const [loading, setLoading] = useState(true);
 
-  // ✅ FIX 1: PULISCI SESSIONE VECCHIA ALL'AVVIO
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Pulisci sessioni vecchie
-        await supabase.auth.signOut().catch(() => {});
-        
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
-          // SUPERADMIN + ADMIN + PLAYER detection
           const metadataRole = session?.user?.user_metadata?.role ?? 
                               session?.user?.app_metadata?.role ?? 'player';
           setRole(metadataRole);
         } else {
           setUser(null);
           setRole('guest');
-          // Pulisci storage all'avvio
-          localStorage.removeItem('supabase.auth.token');
         }
       } catch (err) {
         console.error('Auth init error:', err);
@@ -46,7 +39,6 @@ export default function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // ✅ FIX 2: LISTENER SUPABASE OTTIMIZZATO
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔄 Auth event:', event, session?.user?.email || 'no user');
@@ -56,14 +48,13 @@ export default function AuthProvider({ children }) {
         const metadataRole = session?.user?.user_metadata?.role ?? 
                             session?.user?.app_metadata?.role ?? 'player';
         setRole(metadataRole);
-        console.log('👑 Role:', metadataRole);
       } else if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
         setRole('guest');
-        // ✅ PULIZIA TOTALE
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log('🚪 Logout COMPLETO');
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+        }
       }
     });
 
@@ -94,31 +85,32 @@ export default function AuthProvider({ children }) {
       return data;
     },
     
-    // ✅ FIX 3: LOGOUT BULLET-PROOF DEFINITIVO [web:293]
     signOut: async () => {
       try {
-        console.log('🔄 Logout SUPABASE...');
+        console.log('🔄 Logout WEB...');
+        await supabase.auth.signOut();
         
-        // Supabase logout con scope locale
-        await supabase.auth.signOut({ scope: 'local' });
-        
-        // Pulizia manuale storage
-        localStorage.removeItem('supabase.auth.token');
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Reset stato immediato
         setUser(null);
         setRole('guest');
         
-        console.log('✅ Logout SUCCESS');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('supabase.auth.token');
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+              registrations.forEach(registration => registration.unregister());
+            });
+          }
+        }
+        
       } catch (err) {
         console.error('Logout error:', err);
-      } finally {
-        // ✅ HARD REDIRECT - NO CACHE
-        window.location.href = '/login';
-        window.location.reload();
       }
+      
+      window.location.href = window.location.origin + '/login';
+      window.location.reload();
     }
   };
 
