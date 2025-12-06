@@ -1,4 +1,4 @@
-// src/components/LoginPages.jsx - ✅ TUTTE RICHIESTE + BIANCO PURO + LOGO RESPONSIVE!
+// src/components/LoginPages.jsx - ✅ LOGO SUPER GRANDE MOBILE!
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -120,13 +120,13 @@ const LoginPages = () => {
       {/* ✅ SFONDO BIANCO PURO - NO CONTORNI/OMBRE */}
       <div className="bg-white p-6 max-w-md w-full">
         
-        {/* ✅ LOGO RESPONSIVE MOBILE + "by Claudio Falba" NERO CORSIVO GRASSETTO */}
-        <div className="text-center mb-6 pt-8">
-          {/* 🎨 LOGO GRANDE RESPONSIVE */}
+        {/* ✅ LOGO SUPER GRANDE RESPONSIVE MOBILE */}
+        <div className="text-center mb-8 pt-8">
+          {/* 🎨 LOGO GIGANTE MOBILE */}
           <img 
             src="/logo.png" 
             alt="CIEFFE Padel" 
-            className="mx-auto w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 mb-4 shadow-lg rounded-xl hover:scale-105 transition-transform duration-200" 
+            className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 xl:w-40 xl:h-40 mb-6 shadow-xl rounded-2xl hover:scale-110 transition-all duration-300" 
           />
           
           {/* ✅ NERO + GRASSETTO + CORSIVO SOTTO LOGO */}
