@@ -10,6 +10,8 @@ import TournamentDetail from './components/TournamentDetail';
 import TournamentPlayers from './components/TournamentPlayers';
 import TournamentBracket from './components/TournamentBracket';
 import TournamentBoardAdmin from './components/TournamentBoardAdmin';
+import TournamentBracket from './components/TournamentBracket';
+
 
 // Pagine base
 import Login from './components/Login';
@@ -95,6 +97,11 @@ function AppContent() {
         <Route path="/tournaments/:id/board" element={
           <ProtectedRoute adminOnly>
             <TournamentBoardAdmin />
+          </ProtectedRoute>
+        }/>
+        <Route path="/tournaments/demo/bracket" element={
+          <ProtectedRoute adminOnly>
+             <TournamentBracket />
           </ProtectedRoute>
         }/>
 

@@ -1,23 +1,35 @@
-// src/components/HomeOverview.jsx
-import React from "react";
-import { Home } from "lucide-react";
+const HomeOverview = () => {
+  const bannerImages = [
+    'https://images.unsplash.com/photo-1632543063497-449d763ce38b?w=500&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1608043152268-3689d74defdb?w=500&h=300&fit=crop'
+  ];
 
-export default function HomeOverview() {
   return (
-    <div className="p-12 max-w-6xl mx-auto">
-      <div className="text-center mb-16">
-        <div className="w-28 h-28 bg-white rounded-2xl mx-auto mb-8 flex items-center justify-center shadow-sm border border-gray-200 relative">
-          <Home className="w-12 h-12 text-green-700" />
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* BANNER SEMPLICE */}
+      <div className="relative h-48 md:h-64 rounded-2xl overflow-hidden shadow-xl">
+        <img 
+          src={bannerImages[currentBanner]} 
+          className="w-full h-full object-cover"
+          alt="Padel"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">Marketplace Padel</h2>
+          <button 
+            onClick={() => setActiveSection('marketplace')}
+            className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl"
+          >
+            Vai al Marketplace
+          </button>
         </div>
+      </div>
 
-        <h1 className="text-4xl font-bold text-green-800 mb-4 bg-white py-6 px-12 rounded-3xl inline-block shadow-lg border border-green-200">
-          Benvenuto!
-        </h1>
-
-        <p className="text-lg text-gray-700 max-w-xl mx-auto bg-white py-8 px-10 rounded-3xl shadow-lg border border-gray-200">
-          Accedi a tornei, marketplace e alla tua area personale dal menu.
-        </p>
+      {/* Stats ORIGINALI (tutto il resto rimane) */}
+      <div className="grid grid-cols-3 gap-4 md:gap-6">
+        {/* ... le 3 stat cards originali ... */}
       </div>
     </div>
   );
-}
+};

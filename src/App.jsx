@@ -10,6 +10,9 @@ import TournamentList from './components/TournamentList';
 import TournamentDetailPage from './components/TournamentDetailPage';
 import NotFound from './components/NotFound';
 
+// nuova pagina per il tabellone demo
+import TabellonePage from './pages/TabellonePage';
+
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, isAdmin } = useAuth();
 
@@ -30,36 +33,70 @@ function AppContent() {
     <div className="min-h-screen bg-white">
       <Routes>
         <Route path="/login" element={<LoginPages />} />
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/marketplace" element={
-          <ProtectedRoute>
-            <MarketplaceList />
-          </ProtectedRoute>
-        } />
-        <Route path="/marketplace/gestione" element={
-          <ProtectedRoute adminOnly>
-            <MarketplaceGestion />
-          </ProtectedRoute>
-        } />
-        <Route path="/tornei" element={
-          <ProtectedRoute>
-            <TournamentList />
-          </ProtectedRoute>
-        } />
-        <Route path="/torneo/:id" element={
-          <ProtectedRoute adminOnly>
-            <TournamentDetailPage />
-          </ProtectedRoute>
-        } />
-        <Route path="*" element={
-          <ProtectedRoute>
-            <NotFound />
-          </ProtectedRoute>
-        } />
+
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/marketplace"
+          element={
+            <ProtectedRoute>
+              <MarketplaceList />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/marketplace/gestione"
+          element={
+            <ProtectedRoute adminOnly>
+              <MarketplaceGestion />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tornei"
+          element={
+            <ProtectedRoute>
+              <TournamentList />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/torneo/:id"
+          element={
+            <ProtectedRoute adminOnly>
+              <TournamentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* nuova route protetta per il tabellone demo */}
+        <Route
+          path="/tabellone-demo"
+          element={
+            <ProtectedRoute>
+              <TabellonePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <NotFound />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </div>
   );

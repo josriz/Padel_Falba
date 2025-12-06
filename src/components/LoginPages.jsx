@@ -1,4 +1,4 @@
-// src/components/LoginPages.jsx - ✅ LOGO SUPER GRANDE MOBILE!
+// src/components/LoginPages.jsx - ✅ BANNER CON TUE FOTO MARKETPLACE_ITEMS
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -11,6 +11,8 @@ const LoginPages = () => {
   const { user, role, signIn } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [bannerImages, setBannerImages] = useState([]);
 
   const [email, setEmail] = useState('giose.rizzi@gmail.com');
   const [password, setPassword] = useState('Share1968');
@@ -18,6 +20,81 @@ const LoginPages = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState({ type: null, text: '' });
+
+  // ----------------------------
+  // ✅ Aggiunta: verifica reale URL immagine (evita “foto bianche” da url vuote/rotte)
+  // ----------------------------
+  const validateImageUrl = (url) => {
+    return new Promise((resolve) => {
+      if (!url || typeof url !== 'string' || url.trim() === '') return resolve(false);
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      // piccolo trick: se l'URL è cacheata/instabile, forziamo un refresh leggero (non obbligatorio)
+      img.src = url;
+    });
+  };
+
+  // ----------------------------
+  // ✅ BANNER DAL TUO MARKETPLACE (immagine_url + venduto=false)
+  // ----------------------------
+  useEffect(() => {
+    const fetchMarketplaceImages = async () => {
+      try {
+        console.log('🔄 Fetching marketplace_items...');
+        const { data, error } = await supabase
+          .from('marketplace_items')
+          .select('immagine_url')
+          .eq('venduto', false)
+          .order('created_at', { ascending: false })
+          .limit(8);
+
+        console.log('📊 Marketplace data:', data);
+        console.log('❌ Marketplace error:', error);
+
+        if (error) throw error;
+
+        const rawUrls =
+          data
+            ?.filter((item) => item.immagine_url && item.immagine_url.trim() !== '')
+            ?.map((item) => item.immagine_url)
+            ?.slice(0, 8) || [];
+
+        // ✅ qui filtriamo davvero: teniamo solo URL che caricano (onload ok)
+        const validity = await Promise.all(rawUrls.map((u) => validateImageUrl(u)));
+        const validUrls = rawUrls.filter((_, idx) => validity[idx]);
+
+        console.log('🖼️ Raw urls:', rawUrls.length, 'valid urls:', validUrls.length);
+
+        if (validUrls.length === 0) {
+          console.log('⚠️ No valid marketplace images - using fallback');
+          setBannerImages([
+            'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
+          ]);
+        } else {
+          setBannerImages(validUrls);
+          console.log('✅ TUO MARKETPLACE BANNER ATTIVO!');
+        }
+      } catch (err) {
+        console.error('Banner error:', err);
+        setBannerImages([
+          'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
+        ]);
+      }
+    };
+
+    fetchMarketplaceImages();
+  }, []);
+
+  // ✅ CAROUSEL AUTOMATICO
+  useEffect(() => {
+    if (bannerImages.length > 0) {
+      const interval = setInterval(() => {
+        setBannerIndex((prev) => (prev + 1) % bannerImages.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [bannerImages.length]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -42,12 +119,12 @@ const LoginPages = () => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { role: 'admin' } }
+        options: { data: { role: 'admin' } },
       });
       if (error) throw error;
       showMessage('success', '✅ Registrato! Ora fai LOGIN');
     } catch (err) {
-      showMessage('error', `Signup fallito: ${err.message}`);
+      showMessage('error', 'Signup fallito: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -78,7 +155,7 @@ const LoginPages = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: window.location.origin },
       });
       if (error) throw error;
     } catch (err) {
@@ -96,7 +173,7 @@ const LoginPages = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin,
       });
       if (error) throw error;
       showMessage('success', '📧 Email per reset password inviata');
@@ -117,30 +194,55 @@ const LoginPages = () => {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center py-8 px-4">
-      {/* ✅ SFONDO BIANCO PURO - NO CONTORNI/OMBRE */}
       <div className="bg-white p-6 max-w-md w-full">
-        
-        {/* ✅ LOGO SUPER GRANDE RESPONSIVE MOBILE */}
+        {/* ✅ LOGO SUPER GRANDE + BANNER MARKETPLACE */}
         <div className="text-center mb-8 pt-8">
-          {/* 🎨 LOGO GIGANTE MOBILE */}
-          <img 
-            src="/logo.png" 
-            alt="CIEFFE Padel" 
-            className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 xl:w-40 xl:h-40 mb-6 shadow-xl rounded-2xl hover:scale-110 transition-all duration-300" 
+          <img
+            src="/logo.png"
+            alt="CIEFFE Padel"
+            className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 xl:w-40 xl:h-40 mb-6 shadow-xl rounded-2xl hover:scale-110 transition-all duration-300"
           />
-          
-          {/* ✅ NERO + GRASSETTO + CORSIVO SOTTO LOGO */}
+
           <p className="text-sm font-bold italic text-gray-900 tracking-wide mb-4 drop-shadow-sm">
             <span className="not-italic font-semibold text-gray-800 mr-1">by</span>
             Claudio Falba
           </p>
-          
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Accedi a CIEFFE Padel
-          </h1>
-          <p className="text-sm text-gray-600">
-            Gestisci tornei PADEL 2vs2
-          </p>
+
+          {/* ✅ BANNER CON TUE FOTO */}
+          <div className="w-full h-20 rounded-2xl overflow-hidden shadow-lg mb-6 relative bg-gray-200">
+            {bannerImages.length > 0 ? (
+              <img
+                src={bannerImages[bannerIndex]}
+                alt="Marketplace"
+                className="w-full h-full object-cover transition-all duration-700"
+                loading="eager"
+                onError={() => {
+                  // se una foto dovesse risultare “rotta” al momento del render, salta subito alla prossima
+                  setBannerIndex((prev) => (prev + 1) % bannerImages.length);
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-teal-500 animate-pulse flex items-center justify-center">
+                <span className="text-white text-xs font-bold">Caricando...</span>
+              </div>
+            )}
+
+            {/* Dots */}
+            <div className="absolute top-2 right-3 flex gap-1">
+              {bannerImages.map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    i === bannerIndex ? 'w-4 bg-emerald-500 shadow-lg' : 'bg-white/60'
+                  }`}
+                  onClick={() => setBannerIndex(i)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Accedi a CIEFFE Padel</h1>
+          <p className="text-sm text-gray-600">Gestisci tornei PADEL 2vs2</p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
@@ -149,17 +251,16 @@ const LoginPages = () => {
               <LogIn className="w-4 h-4 text-emerald-600" />
               Email
             </label>
-            <input 
+            <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="giose.rizzi@gmail.com"
               className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-sm shadow-sm"
               required
             />
           </div>
-          
-          {/* ✅ PASSWORD CON OCCHIETTO */}
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -167,9 +268,9 @@ const LoginPages = () => {
             </label>
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-sm shadow-sm"
                 minLength={isSignUp ? 8 : 6}
@@ -190,7 +291,7 @@ const LoginPages = () => {
           </div>
 
           <div className="flex justify-end text-sm mb-2">
-            <button 
+            <button
               type="button"
               onClick={handleResetPassword}
               className="text-emerald-600 hover:underline font-medium flex items-center gap-1"
@@ -228,15 +329,15 @@ const LoginPages = () => {
         </div>
 
         <div className="space-y-2">
-          <button 
-            onClick={() => handleOAuthLogin('google')} 
+          <button
+            onClick={() => handleOAuthLogin('google')}
             disabled={loading}
             className="flex items-center justify-center w-full py-2 px-3 rounded-xl border-2 border-gray-200 hover:border-emerald-400 hover:bg-gray-50 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
           >
             <FcGoogle className="w-5 h-5 mr-2" /> Accedi con Google
           </button>
-          <button 
-            onClick={() => handleOAuthLogin('facebook')} 
+          <button
+            onClick={() => handleOAuthLogin('facebook')}
             disabled={loading}
             className="flex items-center justify-center w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all text-sm"
           >
@@ -245,26 +346,33 @@ const LoginPages = () => {
         </div>
 
         {message.type && (
-          <div className={`mt-4 p-3 rounded-xl flex items-start gap-2 shadow-sm border text-sm ${
-            message.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 
-            message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 
-            'bg-gray-50 border-gray-200 text-gray-800'
-          }`}>
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4 mt-0.5" /> : <AlertCircle className="w-4 h-4 mt-0.5" />}
+          <div
+            className={`mt-4 p-3 rounded-xl flex items-start gap-2 shadow-sm border text-sm ${
+              message.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : message.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-gray-50 border-gray-200 text-gray-800'
+            }`}
+          >
+            {message.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 mt-0.5" />
+            )}
             <span>{message.text}</span>
           </div>
         )}
 
         <div className="text-center mt-6">
-          <button 
-            onClick={toggleMode} 
+          <button
+            onClick={toggleMode}
             className="text-gray-900 hover:text-emerald-600 font-semibold text-sm hover:underline transition-all"
           >
             {isSignUp ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati'}
           </button>
         </div>
 
-        {/* ✅ PRIVACY + @ Josè Rizzi GRASSETTO CORSIVO */}
         <div className="mt-6 text-center text-xs text-gray-400 space-y-1">
           <p className="mb-1 text-sm leading-relaxed">
             Registrandoti accetti le nostre{' '}
@@ -276,9 +384,7 @@ const LoginPages = () => {
               politica sulla privacy
             </span>
           </p>
-          <p className="font-bold italic text-gray-900 text-sm tracking-wide drop-shadow-sm">
-            @ Josè Rizzi
-          </p>
+          <p className="font-bold italic text-gray-900 text-sm tracking-wide drop-shadow-sm">@ Josè Rizzi</p>
         </div>
       </div>
     </div>

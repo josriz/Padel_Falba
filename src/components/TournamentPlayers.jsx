@@ -7,6 +7,9 @@ export default function TournamentPlayers({ tournamentId }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // 🔧 AGGIUNTO: stati per drag&drop
+  const [bracketSlots, setBracketSlots] = useState(Array(32).fill(null));
+  const [draggedPlayer, setDraggedPlayer] = useState(null);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -17,7 +20,6 @@ export default function TournamentPlayers({ tournamentId }) {
       try {
         console.log('🔍 Caricando torneo ID:', tournamentId);
 
-        // ✅ Query aggiornata: join su public_users
         const { data, error } = await supabase
           .from('tournament_registrations')
           .select(`
@@ -40,6 +42,18 @@ export default function TournamentPlayers({ tournamentId }) {
 
         console.log('✅ GIOCATORI:', data);
         setPlayers(data || []);
+        
+        // 🔧 AGGIUNTO: carica slot tabellone esistenti
+        const { data: slots } = await supabase
+          .from('tournament_bracket')
+          .select('slot_index, public_users(name, surname)')
+          .eq('tournament_id', tournamentId);
+        
+        const slotsArray = Array(32).fill(null);
+        slots?.forEach(slot => {
+          slotsArray[slot.slot_index] = slot.public_users;
+        });
+        setBracketSlots(slotsArray);
       } catch (err) {
         console.error('❌ ERRORE:', err);
         setError(err.message);
@@ -50,6 +64,35 @@ export default function TournamentPlayers({ tournamentId }) {
 
     fetchPlayers();
   }, [tournamentId]);
+
+  // 🔧 AGGIUNTO: drag handlers
+  const handleDragStart = (e, player) => {
+    setDraggedPlayer(player);
+    e.dataTransfer.setData('text/plain', JSON.stringify(player));
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, slotIndex) => {
+    e.preventDefault();
+    if (!draggedPlayer) return;
+
+    const newSlots = [...bracketSlots];
+    newSlots[slotIndex] = draggedPlayer.public_users;
+    setBracketSlots(newSlots);
+
+    // Salva in Supabase
+    await supabase.from('tournament_bracket').upsert([{
+      tournament_id: tournamentId,
+      slot_index: slotIndex,
+      user_id: draggedPlayer.user_id,
+      updated_at: new Date().toISOString()
+    }]);
+
+    setDraggedPlayer(null);
+  };
 
   if (loading) {
     return (
@@ -80,57 +123,83 @@ export default function TournamentPlayers({ tournamentId }) {
   }
 
   return (
-    <div className="space-y-3 p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-sm border border-blue-100">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-blue-100">
-        <div className="flex items-center gap-3">
-          <Users className="w-7 h-7 text-blue-600" />
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Tabellone Iscritti</h3>
-            <p className="text-sm text-blue-700 font-medium">{players.length} giocatore/i</p>
+    <div className="space-y-6">
+      {/* 🔧 AGGIUNTO: Sezione Iscritti (Drag) */}
+      <div className="space-y-3 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-2xl shadow-sm border border-emerald-100">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-emerald-100">
+          <div className="flex items-center gap-3">
+            <Users className="w-7 h-7 text-emerald-600" />
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">👥 Iscritti Disponibili (Trascina)</h3>
+              <p className="text-sm text-emerald-700 font-medium">{players.length} giocatore/i</p>
+            </div>
           </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+          {players.map((p) => {
+            const user = p.public_users || {};
+            const displayName = (user.name || '') + ' ' + (user.surname || '');
+            const nameTrimmed = displayName.trim() || user.email || 'N/D';
+
+            return (
+              <div 
+                key={p.id}
+                className="group p-4 bg-white/70 backdrop-blur-sm rounded-xl hover:bg-white hover:shadow-md transition-all border-2 border-dashed border-emerald-200 hover:border-emerald-400 cursor-grab active:cursor-grabbing hover:scale-105"
+                draggable="true"
+                onDragStart={(e) => handleDragStart(e, p)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white font-bold text-lg">
+                      {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-gray-900 truncate" title={nameTrimmed}>
+                      {nameTrimmed}
+                    </div>
+                    <div className="text-xs text-gray-600 truncate">{user.email}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
-        {players.map((p) => {
-          const user = p.public_users || {};
-          const displayName = (user.name || '') + ' ' + (user.surname || '');
-          const nameTrimmed = displayName.trim() || user.email || 'N/D';
-
-          return (
-            <div key={p.id} className="group flex items-center justify-between p-4 bg-white/70 backdrop-blur-sm rounded-xl hover:bg-white hover:shadow-md transition-all border border-gray-100 hover:border-blue-200 hover:-translate-y-0.5">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/50">
-                  <span className="text-white font-bold text-xl drop-shadow-md">
-                    {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-gray-900 truncate" title={nameTrimmed}>
-                    {nameTrimmed}
+      {/* 🔧 AGGIUNTO: Slot Tabellone (Drop) */}
+      <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-sm border border-indigo-100">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          🏆 Slot Tabellone (Rilascia qui)
+        </h3>
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          {bracketSlots.map((slot, index) => (
+            <div
+              key={index}
+              className={`p-3 rounded-xl border-2 transition-all min-h-[70px] flex items-center justify-center text-sm font-medium text-gray-600 ${
+                slot 
+                  ? 'bg-emerald-100 border-emerald-400 shadow-md' 
+                  : 'bg-white/50 border-dashed border-indigo-300 hover:border-indigo-400 hover:bg-indigo-50'
+              }`}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, index)}
+            >
+              {slot ? (
+                <div className="text-center">
+                  <div className="font-bold text-emerald-700 mb-1">
+                    {slot.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <div className="text-sm text-gray-600 truncate" title={user.email}>
-                    {user.email}
+                  <div className="text-xs truncate">
+                    {slot.name} {slot.surname}
                   </div>
-                  {user.phone && (
-                    <div className="text-xs text-gray-500 mt-0.5">📱 {user.phone}</div>
-                  )}
-                  {user.is_super_admin && (
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full mt-1 inline-block">
-                      ADMIN
-                    </span>
-                  )}
                 </div>
-              </div>
-              <div className="text-right ml-4">
-                <div className="text-xs text-gray-500">Iscritto il</div>
-                <div className="font-mono text-sm font-semibold text-gray-900">
-                  {new Date(p.created_at).toLocaleDateString('it-IT')}
-                </div>
-              </div>
+              ) : (
+                <span>Rilascia Slot {index + 1}</span>
+              )}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );

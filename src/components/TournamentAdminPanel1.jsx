@@ -4,22 +4,19 @@ import { supabase } from '../supabaseClient';
 import { Plus, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import TournamentBracket from './components/TournamentBracket';
 
+
 export default function TournamentListAndAdmin() {
   const { isAdmin } = useAuth();
   const [tournaments, setTournaments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    status: 'pianificato',
-    max_players: 32 
-  });
+  const [formData, setFormData] = useState({ name: '', status: 'pianificato' });
 
   const fetchTournaments = async () => {
     try {
       const { data, error } = await supabase
         .from('tournaments')
-        .select('*')
+        .select('*')  // NO columns param → BYPASS cache
         .order('created_at', { ascending: false });
       
       console.log('✅ FETCH OK:', data);
@@ -41,9 +38,7 @@ export default function TournamentListAndAdmin() {
     try {
       const payload = [{
         name: formData.name.trim(),
-        status: formData.status,
-        max_players: formData.max_players,
-        created_by: supabase.auth.getUser().data.user?.id
+        status: formData.status
       }];
       
       console.log('🔄 INSERT PAYLOAD:', payload);
@@ -54,9 +49,9 @@ export default function TournamentListAndAdmin() {
       
       if (error) throw error;
       
-      alert(`✅ Torneo "${formData.name}" creato per ${formData.max_players} giocatori!`);
+      alert('✅ Torneo creato!');
       setShowForm(false);
-      setFormData({ name: '', status: 'pianificato', max_players: 32 });
+      setFormData({ name: '', status: 'pianificato' });
       fetchTournaments();
     } catch (error) {
       console.error('❌ INSERT ERROR:', error);
@@ -102,18 +97,6 @@ export default function TournamentListAndAdmin() {
               className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-blue-500"
               required
             />
-            
-            <select
-              value={formData.max_players}
-              onChange={(e) => setFormData({ ...formData, max_players: parseInt(e.target.value) })}
-              className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="8">👥 8 giocatori</option>
-              <option value="16">👥 16 giocatori</option>
-              <option value="32" selected>👥 32 giocatori</option>
-              <option value="64">👥 64 giocatori</option>
-            </select>
-            
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -132,13 +115,8 @@ export default function TournamentListAndAdmin() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tournaments.map((t) => (
-          <div key={t.id} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
+          <div key={t.id} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl">
             <h3 className="text-xl font-bold mb-3">{t.name}</h3>
-            <div className="mb-2">
-              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                👥 {t.max_players} giocatori
-              </span>
-            </div>
             <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
               {t.status === 'pianificato' ? '📅 Pianificato' :
                t.status === 'in_corso' ? '⚡ In Corso' : '✅ Completato'}
@@ -146,13 +124,7 @@ export default function TournamentListAndAdmin() {
             <p className="text-xs text-gray-500 mt-2">
               {new Date(t.created_at).toLocaleDateString('it-IT')}
             </p>
-            <a 
-              href={`/tournament/${t.id}`} 
-              className="mt-4 block w-full p-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 font-semibold text-center"
-            >
-              👁️ Gestisci Tabellone
-            </a>
-            <button onClick={() => handleDelete(t.id)} className="mt-2 w-full p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
+            <button onClick={() => handleDelete(t.id)} className="mt-4 w-full p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
               🗑️ Elimina
             </button>
           </div>
