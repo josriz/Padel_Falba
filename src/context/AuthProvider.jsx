@@ -1,4 +1,4 @@
-// src/context/AuthProvider.jsx - WEB/PRODUZIONE BULLET-PROOF (locale + produzione)
+// src/context/AuthProvider.jsx - RENDER.COM FIX (tutto preservato)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -109,7 +109,8 @@ export default function AuthProvider({ children }) {
         console.error('Logout error:', err);
       }
       
-      window.location.href = window.location.origin + '/login';
+      // 🔧 RENDER.COM FIX: ROOT redirect
+      window.location.href = '/';
       window.location.reload();
     }
   };
