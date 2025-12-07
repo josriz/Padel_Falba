@@ -1,4 +1,4 @@
-// src/components/LoginPages.jsx - ✅ BANNER CON TUE FOTO MARKETPLACE_ITEMS
+// src/components/LoginPages.jsx - ✅ BANNER PULITO SENZA LOGO INTERNO
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -11,8 +11,6 @@ const LoginPages = () => {
   const { user, role, signIn } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const [bannerImages, setBannerImages] = useState([]);
 
   const [email, setEmail] = useState('giose.rizzi@gmail.com');
   const [password, setPassword] = useState('Share1968');
@@ -20,63 +18,6 @@ const LoginPages = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState({ type: null, text: '' });
-
-  const validateImageUrl = (url) => {
-    return new Promise((resolve) => {
-      if (!url || typeof url !== 'string' || url.trim() === '') return resolve(false);
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-  };
-
-  useEffect(() => {
-    const fetchMarketplaceImages = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('marketplace_items')
-          .select('immagine_url')
-          .eq('venduto', false)
-          .order('created_at', { ascending: false })
-          .limit(8);
-
-        if (error) throw error;
-
-        const rawUrls =
-          data
-            ?.filter((item) => item.immagine_url && item.immagine_url.trim() !== '')
-            ?.map((item) => item.immagine_url)
-            ?.slice(0, 8) || [];
-
-        const validity = await Promise.all(rawUrls.map((u) => validateImageUrl(u)));
-        const validUrls = rawUrls.filter((_, idx) => validity[idx]);
-
-        if (validUrls.length === 0) {
-          setBannerImages([
-            'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
-          ]);
-        } else {
-          setBannerImages(validUrls);
-        }
-      } catch (err) {
-        setBannerImages([
-          'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
-        ]);
-      }
-    };
-
-    fetchMarketplaceImages();
-  }, []);
-
-  useEffect(() => {
-    if (bannerImages.length > 0) {
-      const interval = setInterval(() => {
-        setBannerIndex((prev) => (prev + 1) % bannerImages.length);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
-  }, [bannerImages.length]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -177,8 +118,7 @@ const LoginPages = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center py-8 px-4">
       <div className="bg-white p-6 max-w-md w-full">
-
-        {/* LOGO */}
+        {/* ✅ LOGO SUPER GRANDE */}
         <div className="text-center mb-8 pt-8">
           <img
             src="/logo.png"
@@ -186,50 +126,24 @@ const LoginPages = () => {
             className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 xl:w-40 xl:h-40 mb-6 shadow-xl rounded-2xl hover:scale-110 transition-all duration-300"
           />
 
-          {/* 🔵 BANDA BLU SOTTO LOGO */}
-          <div className="w-full h-3 bg-blue-600 rounded-full mb-6 shadow-md"></div>
-
           <p className="text-sm font-bold italic text-gray-900 tracking-wide mb-4 drop-shadow-sm">
             <span className="not-italic font-semibold text-gray-800 mr-1">by</span>
             Claudio Falba
           </p>
 
-          {/* BANNER MARKETPLACE */}
+          {/* ✅ BANNER PULITO SENZA LOGO INTERNO */}
           <div className="w-full h-20 rounded-2xl overflow-hidden shadow-lg mb-6 relative bg-gray-200">
-            {bannerImages.length > 0 ? (
-              <img
-                src={bannerImages[bannerIndex]}
-                alt="Marketplace"
-                className="w-full h-full object-cover transition-all duration-700"
-                loading="eager"
-                onError={() => {
-                  setBannerIndex((prev) => (prev + 1) % bannerImages.length);
-                }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-teal-500 animate-pulse flex items-center justify-center">
-                <span className="text-white text-xs font-bold">Caricando...</span>
-              </div>
-            )}
-
-            <div className="absolute top-2 right-3 flex gap-1">
-              {bannerImages.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === bannerIndex ? 'w-4 bg-emerald-500 shadow-lg' : 'bg-white/60'
-                  }`}
-                  onClick={() => setBannerIndex(i)}
-                />
-              ))}
-            </div>
+            <img
+              src="/banner-home.jpg"
+              alt="Banner CIEFFE Padel"
+              className="w-full h-full object-cover transition-all duration-700"
+            />
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Accedi a CIEFFE Padel</h1>
           <p className="text-sm text-gray-600">Gestisci tornei PADEL 2vs2</p>
         </div>
 
-        {/* FORM */}
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
