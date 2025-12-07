@@ -21,36 +21,25 @@ const LoginPages = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState({ type: null, text: '' });
 
-  // ----------------------------
-  // ✅ Aggiunta: verifica reale URL immagine (evita “foto bianche” da url vuote/rotte)
-  // ----------------------------
   const validateImageUrl = (url) => {
     return new Promise((resolve) => {
       if (!url || typeof url !== 'string' || url.trim() === '') return resolve(false);
       const img = new Image();
       img.onload = () => resolve(true);
       img.onerror = () => resolve(false);
-      // piccolo trick: se l'URL è cacheata/instabile, forziamo un refresh leggero (non obbligatorio)
       img.src = url;
     });
   };
 
-  // ----------------------------
-  // ✅ BANNER DAL TUO MARKETPLACE (immagine_url + venduto=false)
-  // ----------------------------
   useEffect(() => {
     const fetchMarketplaceImages = async () => {
       try {
-        console.log('🔄 Fetching marketplace_items...');
         const { data, error } = await supabase
           .from('marketplace_items')
           .select('immagine_url')
           .eq('venduto', false)
           .order('created_at', { ascending: false })
           .limit(8);
-
-        console.log('📊 Marketplace data:', data);
-        console.log('❌ Marketplace error:', error);
 
         if (error) throw error;
 
@@ -60,23 +49,17 @@ const LoginPages = () => {
             ?.map((item) => item.immagine_url)
             ?.slice(0, 8) || [];
 
-        // ✅ qui filtriamo davvero: teniamo solo URL che caricano (onload ok)
         const validity = await Promise.all(rawUrls.map((u) => validateImageUrl(u)));
         const validUrls = rawUrls.filter((_, idx) => validity[idx]);
 
-        console.log('🖼️ Raw urls:', rawUrls.length, 'valid urls:', validUrls.length);
-
         if (validUrls.length === 0) {
-          console.log('⚠️ No valid marketplace images - using fallback');
           setBannerImages([
             'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
           ]);
         } else {
           setBannerImages(validUrls);
-          console.log('✅ TUO MARKETPLACE BANNER ATTIVO!');
         }
       } catch (err) {
-        console.error('Banner error:', err);
         setBannerImages([
           'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
         ]);
@@ -86,7 +69,6 @@ const LoginPages = () => {
     fetchMarketplaceImages();
   }, []);
 
-  // ✅ CAROUSEL AUTOMATICO
   useEffect(() => {
     if (bannerImages.length > 0) {
       const interval = setInterval(() => {
@@ -195,7 +177,8 @@ const LoginPages = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center py-8 px-4">
       <div className="bg-white p-6 max-w-md w-full">
-        {/* ✅ LOGO SUPER GRANDE + BANNER MARKETPLACE */}
+
+        {/* LOGO */}
         <div className="text-center mb-8 pt-8">
           <img
             src="/logo.png"
@@ -203,12 +186,15 @@ const LoginPages = () => {
             className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 xl:w-40 xl:h-40 mb-6 shadow-xl rounded-2xl hover:scale-110 transition-all duration-300"
           />
 
+          {/* 🔵 BANDA BLU SOTTO LOGO */}
+          <div className="w-full h-3 bg-blue-600 rounded-full mb-6 shadow-md"></div>
+
           <p className="text-sm font-bold italic text-gray-900 tracking-wide mb-4 drop-shadow-sm">
             <span className="not-italic font-semibold text-gray-800 mr-1">by</span>
             Claudio Falba
           </p>
 
-          {/* ✅ BANNER CON TUE FOTO */}
+          {/* BANNER MARKETPLACE */}
           <div className="w-full h-20 rounded-2xl overflow-hidden shadow-lg mb-6 relative bg-gray-200">
             {bannerImages.length > 0 ? (
               <img
@@ -217,7 +203,6 @@ const LoginPages = () => {
                 className="w-full h-full object-cover transition-all duration-700"
                 loading="eager"
                 onError={() => {
-                  // se una foto dovesse risultare “rotta” al momento del render, salta subito alla prossima
                   setBannerIndex((prev) => (prev + 1) % bannerImages.length);
                 }}
               />
@@ -227,7 +212,6 @@ const LoginPages = () => {
               </div>
             )}
 
-            {/* Dots */}
             <div className="absolute top-2 right-3 flex gap-1">
               {bannerImages.map((_, i) => (
                 <div
@@ -245,6 +229,7 @@ const LoginPages = () => {
           <p className="text-sm text-gray-600">Gestisci tornei PADEL 2vs2</p>
         </div>
 
+        {/* FORM */}
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
