@@ -32,6 +32,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-white">
       <Routes>
+        {/* ✅ GUEST ROUTE - CRITICA per logout! */}
         <Route path="/login" element={<LoginPages />} />
 
         <Route
@@ -89,14 +90,8 @@ function AppContent() {
           }
         />
 
-        <Route
-          path="*"
-          element={
-            <ProtectedRoute>
-              <NotFound />
-            </ProtectedRoute>
-          }
-        />
+        {/* ✅ 404 SOLO per path NON AUTENTICATI */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );
