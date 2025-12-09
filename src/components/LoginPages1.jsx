@@ -1,4 +1,4 @@
-// src/components/LoginPages.jsx - ✅ BANNER CON TUE FOTO MARKETPLACE_ITEMS
+// src/components/LoginPages.jsx - ✅ FIXED: NO AUTO-NAVIGATE + UTENTI CORRETTI
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -11,90 +11,14 @@ const LoginPages = () => {
   const { user, role, signIn } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const [bannerImages, setBannerImages] = useState([]);
 
-  const [email, setEmail] = useState('giose.rizzi@gmail.com');
-  const [password, setPassword] = useState('Share1968');
+  // ✅ UTENTI CORRETTI PRE-CARICATI
+  const [email, setEmail] = useState('cfalba@libero.it');
+  const [password, setPassword] = useState('!Share1968');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState({ type: null, text: '' });
-
-  // ----------------------------
-  // ✅ Aggiunta: verifica reale URL immagine (evita “foto bianche” da url vuote/rotte)
-  // ----------------------------
-  const validateImageUrl = (url) => {
-    return new Promise((resolve) => {
-      if (!url || typeof url !== 'string' || url.trim() === '') return resolve(false);
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      // piccolo trick: se l'URL è cacheata/instabile, forziamo un refresh leggero (non obbligatorio)
-      img.src = url;
-    });
-  };
-
-  // ----------------------------
-  // ✅ BANNER DAL TUO MARKETPLACE (immagine_url + venduto=false)
-  // ----------------------------
-  useEffect(() => {
-    const fetchMarketplaceImages = async () => {
-      try {
-        console.log('🔄 Fetching marketplace_items...');
-        const { data, error } = await supabase
-          .from('marketplace_items')
-          .select('immagine_url')
-          .eq('venduto', false)
-          .order('created_at', { ascending: false })
-          .limit(8);
-
-        console.log('📊 Marketplace data:', data);
-        console.log('❌ Marketplace error:', error);
-
-        if (error) throw error;
-
-        const rawUrls =
-          data
-            ?.filter((item) => item.immagine_url && item.immagine_url.trim() !== '')
-            ?.map((item) => item.immagine_url)
-            ?.slice(0, 8) || [];
-
-        // ✅ qui filtriamo davvero: teniamo solo URL che caricano (onload ok)
-        const validity = await Promise.all(rawUrls.map((u) => validateImageUrl(u)));
-        const validUrls = rawUrls.filter((_, idx) => validity[idx]);
-
-        console.log('🖼️ Raw urls:', rawUrls.length, 'valid urls:', validUrls.length);
-
-        if (validUrls.length === 0) {
-          console.log('⚠️ No valid marketplace images - using fallback');
-          setBannerImages([
-            'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
-          ]);
-        } else {
-          setBannerImages(validUrls);
-          console.log('✅ TUO MARKETPLACE BANNER ATTIVO!');
-        }
-      } catch (err) {
-        console.error('Banner error:', err);
-        setBannerImages([
-          'https://images.unsplash.com/photo-1620102408085-8c9dfd5a2b6f?w=400&h=100&fit=crop',
-        ]);
-      }
-    };
-
-    fetchMarketplaceImages();
-  }, []);
-
-  // ✅ CAROUSEL AUTOMATICO
-  useEffect(() => {
-    if (bannerImages.length > 0) {
-      const interval = setInterval(() => {
-        setBannerIndex((prev) => (prev + 1) % bannerImages.length);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
-  }, [bannerImages.length]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -106,12 +30,14 @@ const LoginPages = () => {
     return () => timeoutRef.current && clearTimeout(timeoutRef.current);
   }, []);
 
+  // ✅ NO AUTO-NAVIGATE - ProtectedRoute gestisce tutto
   useEffect(() => {
     if (user) {
       showMessage('success', `✅ Benvenuto ${user.email}`);
-      setTimeout(() => navigate('/'), 1500);
+      // ❌ RIMOSSO: setTimeout navigate('/')
+      // ✅ ProtectedRoute auto-redirect a /dashboard
     }
-  }, [user, navigate]);
+  }, [user]);
 
   const handleTestSignup = async () => {
     setLoading(true);
@@ -141,7 +67,8 @@ const LoginPages = () => {
       } else {
         await signIn(email, password);
         showMessage('success', `✅ Accesso riuscito ${email}`);
-        setTimeout(() => navigate('/'), 1500);
+        // ❌ RIMOSSO: setTimeout navigate('/')
+        // ✅ ProtectedRoute gestisce redirect automatico
       }
     } catch (err) {
       showMessage('error', err.message || 'Errore durante autenticazione');
@@ -195,7 +122,7 @@ const LoginPages = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center py-8 px-4">
       <div className="bg-white p-6 max-w-md w-full">
-        {/* ✅ LOGO SUPER GRANDE + BANNER MARKETPLACE */}
+        {/* ✅ LOGO SUPER GRANDE */}
         <div className="text-center mb-8 pt-8">
           <img
             src="/logo.png"
@@ -208,37 +135,13 @@ const LoginPages = () => {
             Claudio Falba
           </p>
 
-          {/* ✅ BANNER CON TUE FOTO */}
+          {/* ✅ BANNER PULITO SENZA LOGO INTERNO */}
           <div className="w-full h-20 rounded-2xl overflow-hidden shadow-lg mb-6 relative bg-gray-200">
-            {bannerImages.length > 0 ? (
-              <img
-                src={bannerImages[bannerIndex]}
-                alt="Marketplace"
-                className="w-full h-full object-cover transition-all duration-700"
-                loading="eager"
-                onError={() => {
-                  // se una foto dovesse risultare “rotta” al momento del render, salta subito alla prossima
-                  setBannerIndex((prev) => (prev + 1) % bannerImages.length);
-                }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-teal-500 animate-pulse flex items-center justify-center">
-                <span className="text-white text-xs font-bold">Caricando...</span>
-              </div>
-            )}
-
-            {/* Dots */}
-            <div className="absolute top-2 right-3 flex gap-1">
-              {bannerImages.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === bannerIndex ? 'w-4 bg-emerald-500 shadow-lg' : 'bg-white/60'
-                  }`}
-                  onClick={() => setBannerIndex(i)}
-                />
-              ))}
-            </div>
+            <img
+              src="/banner-home.jpg"
+              alt="Banner CIEFFE Padel"
+              className="w-full h-full object-cover transition-all duration-700"
+            />
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Accedi a CIEFFE Padel</h1>
@@ -255,7 +158,7 @@ const LoginPages = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="giose.rizzi@gmail.com"
+              placeholder="cfalba@libero.it"
               className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-sm shadow-sm"
               required
             />
@@ -271,7 +174,7 @@ const LoginPages = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="!Share1968"
                 className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-sm shadow-sm"
                 minLength={isSignUp ? 8 : 6}
                 required

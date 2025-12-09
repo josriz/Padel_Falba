@@ -1,129 +1,187 @@
-// src/components/TournamentListAndAdmin.jsx - ✅ FIXATO
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../supabaseClient';
-import { Plus, Trash2, Loader2, RefreshCw, Users } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function TournamentListAndAdmin() {
   const { isAdmin } = useAuth();
   const [tournaments, setTournaments] = useState([]);
+  const [participantsCounts, setParticipantsCounts] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', status: 'pianificato' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    status: 'pianificato',
+    data_inizio: new Date().toISOString().split('T')[0]
+  });
 
   const fetchTournaments = async () => {
     setLoading(true);
     try {
-      // ✅ FIX: NO auth.users! → Solo tournament_registrations COUNT
       const { data, error } = await supabase
         .from('tournaments')
         .select(`
-          *,
-          tournament_registrations (
-            count
-          )
+          id,
+          name, 
+          status,
+          max_players,
+          players_count,
+          data_inizio,
+          created_at
         `)
         .order('created_at', { ascending: false });
-
+      
       if (error) throw error;
+      console.log('✅ Tournaments loaded:', data?.length || 0);
       setTournaments(data || []);
+      
+      // ✅ DEBUG: Fetch contatori con ERROR LOG
+      const counts = {};
+      for (const t of data) {
+        try {
+          const { count, error: countError } = await supabase
+            .from('tournament_participants')
+            .select('*', { count: 'exact', head: true })
+            .eq('tournament_id', t.id);
+          
+          if (countError) {
+            console.error(`❌ COUNT ERROR ${t.id}:`, countError);
+            counts[t.id] = 0;
+          } else {
+            console.log(`✅ ${t.name}: ${count} partecipanti`);
+            counts[t.id] = count || 0;
+          }
+        } catch (err) {
+          console.error(`❌ FETCH ERROR ${t.id}:`, err);
+          counts[t.id] = 0;
+        }
+      }
+      setParticipantsCounts(counts);
+      console.log('✅ TUTTI COUNTS:', counts);
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('❌ Fetch tournaments error:', error);
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchTournaments(); }, []);
+  useEffect(() => { 
+    fetchTournaments(); 
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const { error } = await supabase
-        .from('tournaments')
-        .insert([{ name: formData.name.trim(), status: formData.status }]);
+      const { error } = await supabase.from('tournaments')
+        .insert([{ 
+          name: formData.name.trim(), 
+          status: formData.status,
+          max_players: 32,
+          data_inizio: formData.data_inizio
+        }]);
       if (error) throw error;
-
-      alert('✅ Torneo creato!');
       setShowForm(false);
-      setFormData({ name: '', status: 'pianificato' });
+      setFormData({ 
+        name: '', 
+        status: 'pianificato',
+        data_inizio: new Date().toISOString().split('T')[0]
+      });
       fetchTournaments();
     } catch (error) {
-      alert('❌ Errore: ' + error.message);
+      alert('Errore: ' + error.message);
     }
     setLoading(false);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Eliminare questo torneo?')) {
-      setDeletingId(id);
-      try {
-        const { error } = await supabase.from('tournaments').delete().eq('id', id);
-        if (error) throw error;
-        fetchTournaments();
-      } catch (error) {
-        alert('❌ Errore eliminazione: ' + error.message);
-      }
-      setDeletingId(null);
-    }
-  };
+  console.log('isAdmin:', isAdmin);
 
-  const getRegistrationsCount = (tournament) => {
-    return tournament?.tournament_registrations?.[0]?.count || 0;
-  };
-
-  if (!isAdmin) return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-8">
-      <div className="bg-white border border-red-300 p-10 rounded-lg shadow-lg text-center text-red-700">
-        🚫 Accesso Negato - Solo Admin
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <div>🚫 Solo Admin - isAdmin: {isAdmin ? 'TRUE' : 'FALSE'}</div>
+        <button onClick={fetchTournaments}>Test Query</button>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white p-8 max-w-7xl mx-auto">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-semibold text-gray-800">👑 Gestione Tornei Admin</h1>
+    <div className="p-8 max-w-7xl mx-auto">
+      <header className="flex justify-between mb-8">
+        <h1 className="text-4xl font-semibold">Gestione Tornei Admin</h1>
         <div className="flex gap-4">
-          <button onClick={fetchTournaments} disabled={loading} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all">
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /> Aggiorna
+          <button onClick={fetchTournaments} disabled={loading}>
+            <RefreshCw className={loading ? 'animate-spin' : ''} /> Aggiorna
           </button>
-          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all font-semibold">
-            <Plus className="w-5 h-5" /> {showForm ? 'Annulla' : 'Nuovo Torneo'}
+          <button onClick={() => setShowForm(!showForm)}>
+            <Plus /> {showForm ? 'Annulla' : 'Nuovo Torneo'}
           </button>
         </div>
       </header>
 
       {showForm && (
-        <div className="mb-12 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl shadow-xl max-w-2xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome Torneo" className="w-full p-4 border rounded-xl" required />
-            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full p-4 border rounded-xl">
-              <option value="pianificato">📅 Pianificato</option>
-              <option value="in_corso">⚡ In Corso</option>
-              <option value="completato">✅ Completato</option>
-            </select>
-            <button type="submit" disabled={loading} className="w-full p-4 bg-green-600 text-white rounded-xl">Crea Torneo</button>
-          </form>
-        </div>
+        <form onSubmit={handleSubmit} className="mb-8 space-y-4 p-4 border rounded">
+          <input 
+            type="text" 
+            value={formData.name} 
+            onChange={e => setFormData({ ...formData, name: e.target.value })} 
+            placeholder="Nome Torneo" 
+            required 
+            className="w-full p-2 border rounded"
+          />
+          <select 
+            value={formData.status} 
+            onChange={e => setFormData({ ...formData, status: e.target.value })}
+            className="w-full p-2 border rounded"
+          >
+            <option value="pianificato">Pianificato</option>
+            <option value="active">Attivo</option>
+            <option value="completato">Completato</option>
+          </select>
+          <input 
+            type="date" 
+            value={formData.data_inizio} 
+            onChange={e => setFormData({ ...formData, data_inizio: e.target.value })} 
+            className="w-full p-2 border rounded"
+          />
+          <button type="submit" disabled={loading} className="bg-blue-500 text-white p-2 rounded">
+            Crea Torneo
+          </button>
+        </form>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {tournaments.map((t) => (
-          <div key={t.id} className="bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-blue-300 hover:-translate-y-1 transition-all">
-            <h3 className="text-xl font-bold text-gray-900 mb-1">{t.name}</h3>
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${t.status === 'pianificato' ? 'bg-blue-100 text-blue-800' : t.status === 'in_corso' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-              {t.status === 'pianificato' ? '📅 Pianificato' : t.status === 'in_corso' ? '⚡ In Corso' : '✅ Completato'}
-            </span>
-            <div className="flex justify-between mt-4 text-sm text-gray-600">
-              <span>Iscritti: {getRegistrationsCount(t)}</span>
-              <Link to={`/torneo/${t.id}`} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold hover:bg-blue-200 transition-all">Vai al torneo</Link>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tournaments.map((t) => {
+          const participantsCount = participantsCounts[t.id] || 0;
+          return (
+            <div key={t.id} className="p-6 border rounded-lg shadow hover:shadow-lg">
+              <h3 className="font-bold text-xl mb-2">{t.name}</h3>
+              <p><strong>Status:</strong> {t.status}</p>
+              <p><strong>Giocatori:</strong> <span className="font-bold text-green-600">{participantsCount}</span>/{t.max_players || 'N/D'}</p>
+              {t.data_inizio && <p><strong>Inizio:</strong> {new Date(t.data_inizio).toLocaleDateString()}</p>}
+              
+              <div className="mt-4 space-y-2">
+                <Link 
+                  to={`/tournaments/${t.id}`}
+                  className="block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-center"
+                >
+                  Vai al torneo →
+                </Link>
+                <Link 
+                  to={`/tournaments/${t.id}/bracket`}
+                  className="block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-center"
+                >
+                  Tabellone → ({participantsCount})
+                </Link>
+              </div>
             </div>
+          );
+        })}
+        {tournaments.length === 0 && !loading && (
+          <div className="col-span-full p-8 text-center text-gray-500">
+            Nessun torneo trovato
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

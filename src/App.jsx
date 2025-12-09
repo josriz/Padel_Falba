@@ -1,92 +1,133 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AuthProvider, { useAuth } from './context/AuthProvider';
+// src/App.jsx - ✅ SINGLE ROUTE + TournamentBracketEditable ADMIN
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import AuthProvider, { useAuth } from "./context/AuthProvider";
 
-import LoginPages from './components/LoginPages';
-import Dashboard from './components/Dashboard';
-import MarketplaceList from './components/MarketplaceList';
-import MarketplaceGestion from './components/MarketplaceGestion';
-import TournamentList from './components/TournamentList';
-import TournamentDetailPage from './components/TournamentDetailPage';
-import NotFound from './components/NotFound';
+// 🌟 HOME + PUBLIC
+import Home from "./components/Home";
+import LoginPages from "./components/LoginPages";
+import RegistrationPage from "./components/RegistrationPage";  
 
-// nuova pagina per il tabellone demo
-import TabellonePage from './pages/TabellonePage';
+// 👤 DASHBOARD USER
+import Dashboard from "./components/Dashboard";
+import ProfilePage from "./components/ProfilePage";
+import Marketplace from "./components/Marketplace";
 
-function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, loading, isAdmin } = useAuth();
+// 🏆 TORNEI
+import SingleTournament from "./components/SingleTournament";  // ✅ Tutti sub-path
+import TournamentList from "./components/TournamentList";  // Lista admin
+import TournamentBracketEditable from "./components/TournamentBracketEditable";  // ✅ ADMIN BOARD
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-400"></div>
+// ⚙️ ADMIN ONLY
+import MarketplaceGestion from "./components/MarketplaceGestion";
+import TournamentAdminPanel from "./components/TournamentAdminPanel";
+
+// 📱 DEMO + 404
+import TabellonePage from "./pages/TabellonePage";
+import NotFound from "./components/NotFound";
+
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
+      <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
     </div>
   );
+}
 
-  if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { user, loading, role } = useAuth();
+  
+  if (loading) return <LoadingSpinner />;
+
+  if (!user) return <Navigate to="/" replace />;
+  
+  if (user && window.location.pathname === '/') {
+    console.log('🚀 AUTO-REDIRECT → /dashboard');
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  const isAdmin = role === "admin";
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
 
   return children;
 }
 
 function AppContent() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
       <Routes>
-        <Route path="/login" element={<LoginPages />} />
+        {/* 🚀 LOGIN HOME */}
+        <Route path="/" element={<LoginPages />} />
+        <Route path="/register" element={<RegistrationPage />} />
 
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* 👤 DASHBOARD */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/marketplace" element={
+          <ProtectedRoute>
+            <Marketplace />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/marketplace"
-          element={
-            <ProtectedRoute>
-              <MarketplaceList />
-            </ProtectedRoute>
-          }
-        />
+        {/* 🏆 TORNEI - SINGLE ROUTE per TUTTI sub-path */}
+        <Route path="/tournaments" element={
+          <ProtectedRoute>
+            <TournamentList />
+          </ProtectedRoute>
+        } />
+        
+        {/* ✅ SINGLE Tournament: /:id, /:id/players, /:id/bracket */}
+        <Route path="/tournaments/:tournamentId" element={
+          <ProtectedRoute>
+            <SingleTournament />
+          </ProtectedRoute>
+        } />
+        <Route path="/tournaments/:tournamentId/players" element={
+          <ProtectedRoute>
+            <SingleTournament />
+          </ProtectedRoute>
+        } />
+        <Route path="/tournaments/:tournamentId/bracket" element={
+          <ProtectedRoute>
+            <SingleTournament />
+          </ProtectedRoute>
+        } />
+        
+        {/* ✅ ADMIN ONLY: /:id/board → TournamentBracketEditable */}
+        <Route path="/tournaments/:tournamentId/board" element={
+          <ProtectedRoute adminOnly>
+            <TournamentBracketEditable />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/marketplace/gestione"
-          element={
-            <ProtectedRoute adminOnly>
-              <MarketplaceGestion />
-            </ProtectedRoute>
-          }
-        />
+        {/* ⚙️ ADMIN */}
+        <Route path="/admin/marketplace" element={
+          <ProtectedRoute adminOnly>
+            <MarketplaceGestion />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute adminOnly>
+            <TournamentAdminPanel />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/tornei"
-          element={
-            <ProtectedRoute>
-              <TournamentList />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/torneo/:id"
-          element={
-            <ProtectedRoute adminOnly>
-              <TournamentDetailPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tabellone-demo"
-          element={
-            <ProtectedRoute>
-              <TabellonePage />
-            </ProtectedRoute>
-          }
-        />
+        {/* 📱 DEMO */}
+        <Route path="/tabellone-demo" element={
+          <ProtectedRoute>
+            <TabellonePage />
+          </ProtectedRoute>
+        } />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -93,14 +93,14 @@ export default function Dashboard() {
   ];
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      navigate('/login');
-    }
-  };
+  try {
+    await signOut();
+    window.location.href = '/';  // ✅ FORZA reload completo
+  } catch (error) {
+    console.error('Logout error:', error);
+    window.location.href = '/';  // ✅ FORZA reload completo
+  }
+};
 
   const SidebarMenu = () => (
     <div

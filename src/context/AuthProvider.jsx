@@ -1,5 +1,5 @@
-// src/context/AuthProvider.jsx - RENDER.COM FIX (tutto preservato)
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// src/context/AuthProvider.jsx - ✅ CORRETTO: useEffect + ANTI-DOUBLE
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext();
@@ -14,51 +14,71 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('guest');
   const [loading, setLoading] = useState(true);
+  const isSigningInRef = useRef(false); // ✅ ANTI-DOUBLE
 
+  // ✅ FIX: useEffect SEPARATI - NO dependency problems
   useEffect(() => {
-    const initAuth = async () => {
+    // INIT SESSION
+    const initSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
-          const metadataRole = session?.user?.user_metadata?.role ?? 
-                              session?.user?.app_metadata?.role ?? 'player';
-          setRole(metadataRole);
-        } else {
-          setUser(null);
-          setRole('guest');
-        }
+        console.log('🔄 INIT SESSION:', session?.user?.email || 'no user');
+        setUser(session?.user ?? null);
+        setRole(session?.user?.user_metadata?.role || 'player');
       } catch (err) {
-        console.error('Auth init error:', err);
-        setUser(null);
-        setRole('guest');
+        console.error('Init error:', err);
       } finally {
         setLoading(false);
       }
     };
-    initAuth();
+    initSession();
   }, []);
 
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    // AUTH LISTENER
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔄 Auth event:', event, session?.user?.email || 'no user');
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        const metadataRole = session?.user?.user_metadata?.role ?? 
-                            session?.user?.app_metadata?.role ?? 'player';
-        setRole(metadataRole);
-      } else if (event === 'SIGNED_OUT' || !session?.user) {
-        setUser(null);
-        setRole('guest');
-        if (typeof window !== 'undefined') {
-          localStorage.clear();
-          sessionStorage.clear();
-        }
-      }
+      setUser(session?.user ?? null);
+      setRole(session?.user?.user_metadata?.role || 'player');
+      setLoading(false);
     });
 
-    return () => listener?.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = useCallback(async (email, password) => {
+    // ✅ ANTI-DOUBLE CALL
+    if (isSigningInRef.current) {
+      console.log('🔄 signIn già in corso');
+      return;
+    }
+    
+    if (user && user.email === email.toLowerCase()) {
+      console.log('🔄 Già loggato:', user.email);
+      return;
+    }
+
+    isSigningInRef.current = true;
+    console.log('🔄 signIn:', email);
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email: email.trim().toLowerCase(), 
+        password 
+      });
+      if (error) throw error;
+      console.log('🔄 signIn SUCCESS');
+    } catch (error) {
+      console.error('signIn ERROR:', error.message);
+      throw error;
+    } finally {
+      isSigningInRef.current = false;
+    }
+  }, [user]);
+
+  const signOut = useCallback(async () => {
+    console.log('🔄 signOut...');
+    await supabase.auth.signOut();
   }, []);
 
   const value = {
@@ -66,60 +86,16 @@ export default function AuthProvider({ children }) {
     role,
     loading,
     isAdmin: role === 'admin',
-    isSuperAdmin: role === 'superadmin',
-    isGuest: role === 'guest',
     isPlayer: role === 'player' || role === 'user',
-    
-    signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    },
-    
-    signUp: async (email, password) => {
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { data: { role: 'player' } }
-      });
-      if (error) throw error;
-      return data;
-    },
-    
-    signOut: async () => {
-      try {
-        console.log('🔄 Logout WEB...');
-        await supabase.auth.signOut();
-        
-        setUser(null);
-        setRole('guest');
-        
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('supabase.auth.token');
-          localStorage.clear();
-          sessionStorage.clear();
-          
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-              registrations.forEach(registration => registration.unregister());
-            });
-          }
-        }
-        
-      } catch (err) {
-        console.error('Logout error:', err);
-      }
-      
-      // 🔧 RENDER.COM FIX: ROOT redirect
-      window.location.href = '/';
-      window.location.reload();
-    }
+    isGuest: role === 'guest',
+    signIn,
+    signOut
   };
 
   if (loading) {
     return (
-      <div className="min-h-[90vh] flex items-center justify-center bg-white">
+      <div className="min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
-        <p className="text-lg font-semibold text-gray-700">Inizializzazione...</p>
       </div>
     );
   }

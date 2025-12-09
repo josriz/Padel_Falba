@@ -1,196 +1,72 @@
-﻿// src/components/MarketplaceList.jsx - FOTO REALI PERFETTE
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthProvider';
-import { ShoppingCart, Clock, Search, X } from 'lucide-react';
+﻿// src/components/MarketplaceList.jsx
+import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
+import { Loader2, ShoppingCart } from "lucide-react";
 
 export default function MarketplaceList() {
-  const { user } = useAuth();
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newItem, setNewItem] = useState({ nome: '', descrizione: '', prezzo: '', immagine_url: '' });
+  const [loading, setLoading] = useState(true);
 
-  // ✅ CARICA ARTICOLI REALI DAL DATABASE
   useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('marketplace_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error) {
-        setItems(data);
-      }
-
-      setLoading(false);
-    };
-
     fetchItems();
   }, []);
 
-  // ✅ FUNZIONE PUBBLICA ARTICOLO (MANCAVA!)
-  const addItem = async (e) => {
-    e.preventDefault();
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("marketplace_items")
+        .select("*")
+        .eq("venduto", false)
+        .order("created_at", { ascending: false });
 
-    const payload = {
-      ...newItem,
-      prezzo: Number(newItem.prezzo),
-      user_id: user?.id || null
-    };
-
-    const { data, error } = await supabase
-      .from('marketplace_items')
-      .insert(payload)
-      .select();
-
-    if (!error) {
-      setItems([data[0], ...items]);
-      setShowAddModal(false);
-      setNewItem({ nome: '', descrizione: '', prezzo: '', immagine_url: '' });
+      if (error) throw error;
+      setItems(data || []);
+    } catch (err) {
+      console.error("Errore fetching marketplace items:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // WHATSAPP
-  const contactSeller = (item) => {
-    const message = `Ciao! Interessato ${item.nome} (€${item.prezzo})`;
-    window.open(`https://wa.me/393331234567?text=${encodeURIComponent(message)}`);
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <Loader2 className="animate-spin w-12 h-12 text-blue-600" />
+      </div>
+    );
+  }
 
-  const filteredItems = items.filter(item =>
-    item.nome?.toLowerCase().includes(search.toLowerCase()) ||
-    item.descrizione?.toLowerCase().includes(search.toLowerCase())
-  );
+  if (!items.length) {
+    return <p className="text-center text-gray-500 mt-10">Nessun articolo disponibile al momento.</p>;
+  }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8 bg-gradient-to-br from-slate-50 to-gray-50 min-h-screen">
-      
-      {/* HEADER SEMPLICE */}
-      <div className="text-center">
-        <div className="w-20 h-20 bg-emerald-100 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-          <ShoppingCart className="w-10 h-10 text-emerald-600" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace Padel</h1>
-        <p className="text-lg text-gray-600">({filteredItems.length} articoli)</p>
-      </div>
-
-      {/* SEARCH */}
-      <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200 max-w-2xl mx-auto">
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
-              placeholder="Cerca racchette, scarpe..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-300"
+    <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col"
+        >
+          <div className="relative w-full h-48">
+            <img
+              src={item.immagine_url || "https://via.placeholder.com/300x200"}
+              alt={item.nome || "Prodotto"}
+              className="w-full h-full object-cover"
             />
+            <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+              {item.prezzo ? `${item.prezzo} €` : "Gratuito"}
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* GRID SEMPLICE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white p-6 rounded-2xl shadow-md border border-gray-200 hover:shadow-xl transition-all">
-            
-            {/* FOTO */}
-            <div className="w-full h-48 rounded-xl overflow-hidden mb-4 shadow-md">
-              <img 
-                src={item.immagine_url}
-                alt={item.nome}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{item.nome}</h3>
-            
-            <div className="flex justify-between items-baseline mb-3">
-              <span className="text-2xl font-black text-emerald-600">€{item.prezzo}</span>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-bold">Disponibile</span>
-            </div>
-
-            <p className="text-gray-600 mb-4 text-sm leading-relaxed">{item.descrizione}</p>
-
-            <div className="flex items-center text-xs text-gray-500 mb-4">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>{item.created_at?.slice(0, 10)}</span>
-            </div>
-
-            <button
-              onClick={() => contactSeller(item)}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all"
-            >
-              Contatta su WhatsApp
+          <div className="p-4 flex flex-col flex-1 justify-between">
+            <h3 className="font-bold text-lg mb-2">{item.nome}</h3>
+            <p className="text-sm text-gray-600 mb-4">{item.descrizione || "Nessuna descrizione"}</p>
+            <button className="mt-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-center gap-2">
+              <ShoppingCart className="w-5 h-5" /> Acquista
             </button>
           </div>
-        ))}
-      </div>
-
-      {/* BUTTON AGGIUNGI */}
-      <div className="text-center pt-12">
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl"
-        >
-          + Aggiungi articolo
-        </button>
-      </div>
-
-      {/* MODAL AGGIUNGI */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Aggiungi articolo</h2>
-              <button onClick={() => setShowAddModal(false)}>
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={addItem} className="space-y-4">
-              <input
-                placeholder="Nome (es: Racchetta Bullpadel)"
-                value={newItem.nome}
-                onChange={(e) => setNewItem({...newItem, nome: e.target.value})}
-                className="w-full p-3 border rounded-xl"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Prezzo"
-                value={newItem.prezzo}
-                onChange={(e) => setNewItem({...newItem, prezzo: e.target.value})}
-                className="w-full p-3 border rounded-xl"
-                required
-              />
-              <textarea
-                placeholder="Descrizione"
-                value={newItem.descrizione}
-                onChange={(e) => setNewItem({...newItem, descrizione: e.target.value})}
-                rows="3"
-                className="w-full p-3 border rounded-xl"
-              />
-              <input
-                placeholder="URL immagine"
-                value={newItem.immagine_url}
-                onChange={(e) => setNewItem({...newItem, immagine_url: e.target.value})}
-                className="w-full p-3 border rounded-xl"
-              />
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 p-3 border rounded-xl">
-                  Annulla
-                </button>
-                <button type="submit" className="flex-1 p-3 bg-emerald-600 text-white rounded-xl">
-                  Pubblica
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }

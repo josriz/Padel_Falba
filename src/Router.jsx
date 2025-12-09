@@ -3,17 +3,17 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthProvider';
 import { supabase } from './supabaseClient';
 
-// ✅ SOLO ADMIN (7 file)
+// COMPONENTI TORNEI ADMIN
 import TournamentAdminPanel from './components/TournamentAdminPanel';
 import TournamentList from './components/TournamentList';
-import TournamentDetail from './components/TournamentDetail';
 import TournamentPlayers from './components/TournamentPlayers';
-import TournamentBracket from './components/TournamentBracket';
 import TournamentBoardAdmin from './components/TournamentBoardAdmin';
 import TournamentBracket from './components/TournamentBracket';
 
+// COMPONENTI UTENTE
+import TournamentUserPanel from './components/TournamentUserPanel';
 
-// Pagine base
+// PAGINE BASE
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Marketplace from './components/Marketplace';
@@ -22,18 +22,16 @@ import Home from './components/Home';
 import Leaderboard from './components/Leaderboard';
 
 function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, role, loading } = useAuth(); // ✅ uso role dal context
-  
-  if (loading) return <div>Caricamento...</div>;
-  
+  const { user, role, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Caricamento...</div>;
+
   if (!user) return <Navigate to="/login" replace />;
-  
+
   const isAdmin = role === 'admin';
-  
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  
+
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
+
   return children;
 }
 
@@ -41,78 +39,75 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        {/* PUBLIC */}
+        {/* PUBBLICO */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/marketplace" element={<Marketplace />} />
 
-        {/* STANDARD USER */}
+        {/* UTENTE STANDARD */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/leaderboard" element={
           <ProtectedRoute>
             <Leaderboard />
           </ProtectedRoute>
-        }/>
+        } />
+        <Route path="/torneo/:id" element={
+          <ProtectedRoute>
+            <TournamentUserPanel />
+          </ProtectedRoute>
+        } />
 
         {/* ADMIN ONLY */}
         <Route path="/admin" element={
           <ProtectedRoute adminOnly>
             <div>Admin Dashboard</div>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/admin/tournaments" element={
           <ProtectedRoute adminOnly>
             <TournamentAdminPanel />
           </ProtectedRoute>
-        }/>
-        <Route path="/tournaments" element={
-          <ProtectedRoute adminOnly>
-            <TournamentList />
-          </ProtectedRoute>
-        }/>
-        <Route path="/tournaments/:id" element={
-          <ProtectedRoute adminOnly>
-            <TournamentDetail />
-          </ProtectedRoute>
-        }/>
-        <Route path="/tournaments/:id/players" element={
+        } />
+        <Route path="/admin/tournaments/:id/players" element={
           <ProtectedRoute adminOnly>
             <TournamentPlayers />
           </ProtectedRoute>
-        }/>
-        <Route path="/tournaments/:id/bracket" element={
+        } />
+        <Route path="/admin/tournaments/:id/bracket" element={
           <ProtectedRoute adminOnly>
             <TournamentBracket />
           </ProtectedRoute>
-        }/>
-        <Route path="/tournaments/:id/board" element={
+        } />
+        <Route path="/admin/tournaments/:id/board" element={
           <ProtectedRoute adminOnly>
             <TournamentBoardAdmin />
           </ProtectedRoute>
-        }/>
-        <Route path="/tournaments/demo/bracket" element={
+        } />
+
+        {/* ROUTE DEMO */}
+        <Route path="/admin/tournaments/demo/bracket" element={
           <ProtectedRoute adminOnly>
-             <TournamentBracket />
+            <TournamentBracket />
           </ProtectedRoute>
-        }/>
+        } />
 
         {/* 404 */}
-        <Route path="*" element={<div>404 Non trovato</div>} />
+        <Route path="*" element={<div className="text-center p-20 text-2xl">404 - Pagina non trovata</div>} />
       </Routes>
     </div>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <Router>
@@ -121,5 +116,3 @@ function App() {
     </AuthProvider>
   );
 }
-
-export default App;
