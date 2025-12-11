@@ -4,7 +4,7 @@ import { registerToTournament } from '../utils/registerToTournament';
 import { useAuth } from '../context/AuthProvider';
 import { Users, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
-export default function TournamentSignup({ tournamentId, onSuccess }) {
+export default function TournamentSignup({ tournamentId, tournamentPrice, onSuccess }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -32,7 +32,7 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
       setLoading(false);
       
       if (res.ok) {
-        setMessage({ type: 'success', text: '✅ Iscrizione avvenuta con successo!' });
+        setMessage({ type: 'success', text: `✅ Iscrizione avvenuta con successo! Costo: €${tournamentPrice || 0}` });
         if (onSuccess) onSuccess(res.data);
       } else {
         setMessage({ type: 'error', text: `❌ Errore: ${res.error?.message || 'Errore sconosciuto'}` });
@@ -45,7 +45,6 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-md mx-auto hover:shadow-md transition-all hover:-translate-y-0.5">
-      {/* ✅ HEADER COMPATTO */}
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-blue-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
           <Users className="w-8 h-8 text-blue-600" />
@@ -54,7 +53,6 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
         <p className="text-sm text-gray-600">Torneo ID: <strong>{tournamentId}</strong></p>
       </div>
       
-      {/* ✅ MESSAGGI */}
       {message && (
         <div className={`p-4 rounded-xl mb-6 flex items-start gap-3 shadow-sm ${
           message.type === 'success' 
@@ -70,7 +68,6 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
         </div>
       )}
       
-      {/* ✅ NO LOGIN */}
       {!user && (
         <div className="text-center py-8 space-y-4">
           <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
@@ -85,7 +82,6 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
         </div>
       )}
       
-      {/* ✅ CON LOGIN */}
       {user && (
         <div className="space-y-4">
           <button 
@@ -107,7 +103,7 @@ export default function TournamentSignup({ tournamentId, onSuccess }) {
           </button>
           
           <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-100">
-            Utente: <strong>{user.email}</strong>
+            Utente: <strong>{user.email}</strong> | Prezzo: €{tournamentPrice || 0}
           </div>
         </div>
       )}

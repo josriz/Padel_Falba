@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";           // ✅ PRIMO
-import { supabase } from "../supabaseClient";                 // ✅ SECONDO
-import { useAuth } from "../context/AuthProvider";            // ✅ TERZO
-import { Users, Loader2, Edit, Mail } from "lucide-react";    // ✅ QUARTO
+// src/components/TournamentPlayers.jsx
+import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthProvider";
+import { Users, Loader2 } from "lucide-react";
 
 export default function TournamentPlayers({ tournamentId, bracketSlots, setBracketSlots }) {
   const [players, setPlayers] = useState([]);
@@ -19,25 +20,40 @@ export default function TournamentPlayers({ tournamentId, bracketSlots, setBrack
       setLoading(true);
       setError(null);
       try {
-        console.log('🔍 Caricando torneo ID:', tournamentId);
-
-        const { data: partData, error: partError } = await supabase
-          .from('tournament_participants')
-          .select('id, nome, cognome, email, user_id')
-          .eq('tournament_id', tournamentId)
-          .order('id');
-
-        if (partError) {
-          console.error('❌ tournament_participants error:', partError);
-          throw partError;
+        // ✅ MULTI-TABELLA: Prova tutte le tabelle possibili
+        const tables = ['tournament_registrations', 'tournament_participants', 'tournament_players'];
+        let allPlayers = [];
+        
+        for (const table of tables) {
+          try {
+            const { data, error: tableError } = await supabase
+              .from(table)
+              .select('id, nome, cognome, email, user_id, name, surname')
+              .eq('tournament_id', tournamentId)
+              .order('id');
+            
+            if (tableError) {
+              console.log(`❌ ${table}:`, tableError.message);
+            } else {
+              console.log(`✅ ${table}: ${data?.length || 0} giocatori`);
+              allPlayers = [...allPlayers, ...(data || [])];
+            }
+          } catch (e) {
+            console.log(`❌ Tabella ${table} non esiste`);
+          }
         }
         
-        console.log('✅ tournament_participants:', partData?.length || 0);
-        setPlayers(partData || []);
+        // Rimuovi duplicati per ID
+        const uniquePlayers = allPlayers.filter((player, index, self) => 
+          index === self.findIndex(p => p.id === player.id)
+        );
+        
+        setPlayers(uniquePlayers);
+        console.log('✅ TOTALE GIOCATORI CARICATI:', uniquePlayers.length);
         
       } catch (err) {
-        console.error('❌ ERRORE fetchPlayers:', err);
         setError(err.message);
+        console.error('❌ fetchPlayers:', err);
       } finally {
         setLoading(false);
       }
@@ -49,7 +65,6 @@ export default function TournamentPlayers({ tournamentId, bracketSlots, setBrack
   const handleDragStart = (e, player) => {
     setDraggedPlayer(player);
     e.dataTransfer.setData('text/plain', JSON.stringify(player));
-    console.log('🎾 DRAG START:', player);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -69,7 +84,7 @@ export default function TournamentPlayers({ tournamentId, bracketSlots, setBrack
   if (error) {
     return (
       <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-800 text-center">
-        <UserIcon className="w-8 h-8 mx-auto mb-2 opacity-75" />
+        <Users className="w-8 h-8 mx-auto mb-2 opacity-75" />
         <div>Errore: {error}</div>
       </div>
     );
@@ -90,9 +105,10 @@ export default function TournamentPlayers({ tournamentId, bracketSlots, setBrack
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-80 overflow-y-auto p-2">
           {players.map((p) => {
-            const nome = p.nome || 'N/D';
-            const cognome = p.cognome || '';
+            const nome = p.nome || p.name || 'N/D';
+            const cognome = p.cognome || p.surname || '';
             const fullName = `${nome} ${cognome}`.trim();
+            const email = p.email || 'N/D';
             
             return (
               <div 
@@ -104,16 +120,14 @@ export default function TournamentPlayers({ tournamentId, bracketSlots, setBrack
               >
                 <div className="flex items-start gap-4 h-full">
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0 mt-1">
-                    <span className="text-white font-bold text-2xl">
-                      {nome[0]?.toUpperCase()}
-                    </span>
+                    <span className="text-white font-bold text-2xl">{nome[0]?.toUpperCase()}</span>
                   </div>
                   <div className="flex-1 py-2 min-w-0">
                     <div className="font-bold text-lg text-gray-900 mb-2 whitespace-normal break-words leading-tight" title={fullName}>
                       {fullName}
                     </div>
                     <div className="text-sm text-gray-600 whitespace-normal break-words bg-gray-50 px-2 py-1 rounded">
-                      {p.email}
+                      {email}
                     </div>
                   </div>
                 </div>

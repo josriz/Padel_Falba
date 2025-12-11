@@ -1,4 +1,5 @@
-﻿// src/components/Dashboard.jsx
+﻿// src/components/Dashboard.jsx - ✅ COMPLETO FIXATO "Eventi" PROBLEMATICO!
+import { Navigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthProvider';
 import { useNavigate } from 'react-router-dom';
@@ -6,8 +7,7 @@ import { Menu, X, Home, Calendar, User, LogOut, Shield, ShoppingBag, Trophy, Zap
 import { supabase } from '../supabaseClient';
 
 import ProfilePage from './ProfilePage';
-import TournamentViewOnly from './TournamentViewOnly';
-import TournamentListAndAdmin from './TournamentListAndAdmin';
+import TournamentViewOnly from './TournamentViewOnly';  // ✅ FIX #1: VIEW GENERICA
 import MarketplaceList from './MarketplaceList';
 import MarketplaceGestion from './MarketplaceGestion';
 
@@ -93,14 +93,14 @@ export default function Dashboard() {
   ];
 
   const handleLogout = async () => {
-  try {
-    await signOut();
-    window.location.href = '/';  // ✅ FORZA reload completo
-  } catch (error) {
-    console.error('Logout error:', error);
-    window.location.href = '/';  // ✅ FORZA reload completo
-  }
-};
+    try {
+      await signOut();
+      window.location.href = '/'; // ✅ FORZA reload completo
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/'; // ✅ FORZA reload completo
+    }
+  };
 
   const SidebarMenu = () => (
     <div
@@ -238,19 +238,25 @@ export default function Dashboard() {
   );
 
   const renderSection = () => {
-    switch(activeSection) {
-      case 'home': return <HomeOverview />;
-      case 'tornei': return <TournamentViewOnly />;
-      case 'admin-tornei': return isAdmin ? <TournamentListAndAdmin /> : <AccessDenied />;
-      case 'marketplace': return <MarketplaceList />;
-      case 'marketplace-gestione': return isAdmin ? <MarketplaceGestion /> : <AccessDenied />;
-      case 'profilo': return <ProfilePage logout={handleLogout} />;
-      case 'logout': handleLogout(); return <div className="p-12 text-center text-green-700 bg-white/80 rounded-2xl shadow-md border border-green-200">Logout in corso...</div>;
-      default: return <div className="p-12 text-center text-green-700 bg-white/80 rounded-2xl shadow-md border border-green-200">Sezione non trovata</div>;
-    }
-  };
+  switch(activeSection) {
+    case 'home': return <HomeOverview />;
+    case 'tornei': return <TournamentViewOnly />;  // ✅ FIX #2: VIEW GENERICA (NO 106 iscritti)
+    case 'admin-tornei': return isAdmin ? <Navigate to="/admin" replace /> : <AccessDenied />;
+    case 'marketplace': return (
+      <div className="p-8 text-center text-gray-600 bg-white/80 rounded-2xl shadow-md max-w-2xl mx-auto">
+        <ShoppingBag className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+        <h2 className="text-2xl font-bold mb-4">Marketplace in Sviluppo</h2>
+        <p>La sezione marketplace sarà disponibile presto!</p>
+      </div>
+    );
+    case 'marketplace-gestione': return isAdmin ? <MarketplaceGestion /> : <AccessDenied />;
+    case 'profilo': return <ProfilePage logout={handleLogout} />;
+    case 'logout': handleLogout(); return <div className="p-12 text-center text-green-700 bg-white/80 rounded-2xl shadow-md border border-green-200">Logout in corso...</div>;
+    default: return <div className="p-12 text-center text-green-700 bg-white/80 rounded-2xl shadow-md border border-green-200">Sezione non trovata</div>;
+  }
+};
 
-  return (
+return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <header className="bg-white/90 backdrop-blur-sm border-b border-green-200/50 shadow-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4">

@@ -1,42 +1,102 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient'; // ← ADATTA PATH
+import { supabase } from '../supabaseClient';
 
 const TournamentDetailPage = () => {
   const { id } = useParams();
   const [tournament, setTournament] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [participantsCount, setParticipantsCount] = useState(0);
   const [showPlayersMenu, setShowPlayersMenu] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ✅ CARICA DATI REALI SUPABASE
+  // ✅ CARICA DATI REALI SUPABASE - MULTI-TABELLA
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       
-      // Torneo
-      const { data: tournamentData } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('id', id)
-        .single();
-      setTournament(tournamentData);
+      try {
+        // Torneo
+        const { data: tournamentData } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('id', id)
+          .single();
+        setTournament(tournamentData);
 
-      // Iscritti REALI
-      const { data: registrations } = await supabase
-        .from('tournament_registrations')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            email,
-            is_admin
-          )
-        `)
-        .eq('tournament_id', id);
-      
-      setPlayers(registrations || []);
-      setLoading(false);
+        // ✅ MULTI-TABELLA + JOIN profiles (fallback incluso)
+        const tables = [
+          {
+            table: 'tournament_registrations',
+            select: `
+              *,
+              profiles(full_name, email, is_admin)
+            `
+          },
+          {
+            table: 'tournament_participants',
+            select: 'id, nome, cognome, email, user_id, name, surname, level'
+          },
+          {
+            table: 'tournament_players',
+            select: 'id, nome, cognome, email, user_id, name, surname, level'
+          },
+          {
+            table: 'registrations',
+            select: 'id, player_name, player_surname, player_email, team_name, level'
+          }
+        ];
+        
+        let allPlayers = [];
+        let totalCount = 0;
+        
+        for (const { table, select } of tables) {
+          try {
+            const { data, count, error: tableError } = await supabase
+              .from(table)
+              .select(select)
+              .eq('tournament_id', id);
+            
+            if (tableError) {
+              console.log(`❌ ${table}:`, tableError.message);
+            } else {
+              console.log(`✅ ${table}: ${data?.length || 0} giocatori`);
+              
+              // ✅ Normalizza dati con profiles JOIN
+              const normalized = data?.map(registration => ({
+                id: registration.id,
+                full_name: registration.profiles?.full_name || 
+                          registration.nome || registration.name || 
+                          registration.player_name || 'N/D',
+                email: registration.profiles?.email || 
+                      registration.email || registration.player_email || 'N/D',
+                level: registration.level || 'N/D',
+                team_name: registration.team_name,
+                is_admin: registration.profiles?.is_admin || false
+              })) || [];
+              
+              allPlayers = [...allPlayers, ...normalized];
+              totalCount += count || data?.length || 0;
+            }
+          } catch (e) {
+            console.log(`❌ Tabella ${table} non esiste`);
+          }
+        }
+        
+        // ✅ Deduplica per ID
+        const uniquePlayers = allPlayers.filter((player, index, self) => 
+          index === self.findIndex(p => p.id === player.id)
+        );
+        
+        setPlayers(uniquePlayers);
+        setParticipantsCount(totalCount);
+        console.log('✅ TournamentDetailPage: TOTALE', totalCount, 'giocatori caricati');
+        
+      } catch (err) {
+        console.error('❌ fetchData:', err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -46,6 +106,14 @@ const TournamentDetailPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50 text-gray-600">
+        Torneo non trovato
       </div>
     );
   }
@@ -63,11 +131,11 @@ const TournamentDetailPage = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-black bg-gradient-to-r from-gray-900 to-emerald-900 bg-clip-text text-transparent">
-                  {tournament?.name || 'Caricamento...'}
+                  {tournament.name}
                 </h1>
                 <div className="flex items-center space-x-6 text-sm text-gray-600 mt-1">
-                  <span>📅 {tournament?.date || 'N/D'}</span>
-                  <span>👥 {players.length} iscritti</span>
+                  <span>📅 {tournament.date || 'N/D'}</span>
+                  <span>👥 <strong>{participantsCount}</strong> / {tournament.max_players || 16} iscritti</span>
                   <span>⚡ Round of 16</span>
                 </div>
               </div>
@@ -79,7 +147,7 @@ const TournamentDetailPage = () => {
                 onClick={() => setShowPlayersMenu(!showPlayersMenu)}
                 className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-500/90 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                <span>👥 {players.length} Iscritti</span>
+                <span>👥 {participantsCount} Iscritti</span>
                 <span className={`transform transition-transform ${showPlayersMenu ? 'rotate-180' : ''}`}>
                   ►
                 </span>
@@ -108,18 +176,21 @@ const TournamentDetailPage = () => {
             </h2>
             
             <div className="space-y-3">
-              {players.map((registration, i) => {
-                const player = registration.profiles;
-                return (
-                  <div key={registration.id} className="group bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-lg transition-all duration-200 cursor-pointer">
+              {players.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-2xl">
+                  Nessun iscritto trovato
+                </div>
+              ) : (
+                players.map((player, i) => (
+                  <div key={player.id} className="group bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-lg transition-all duration-200 cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-                          <span className="font-bold text-white text-sm">P{i+1}</span>
+                          <span className="font-bold text-white text-sm">{player.full_name?.[0] || `P${i+1}`}</span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-lg text-gray-900 truncate">{player?.full_name || 'N/D'}</p>
-                          <p className="text-sm text-emerald-700 font-semibold">{registration.level || 'N/D'}</p>
+                          <p className="font-bold text-lg text-gray-900 truncate">{player.full_name}</p>
+                          <p className="text-sm text-emerald-700 font-semibold">{player.level}</p>
                         </div>
                       </div>
                       <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
@@ -127,8 +198,8 @@ const TournamentDetailPage = () => {
                       </span>
                     </div>
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
           </div>
         </div>
