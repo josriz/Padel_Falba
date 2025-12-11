@@ -2,11 +2,10 @@
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../supabaseClient';
 import { Trophy, Users, Loader2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export default function TournamentList() {
   const { isAdmin } = useAuth();
-  const navigate = useNavigate();
   const [tournaments, setTournaments] = useState([]);
   const [participantsCounts, setParticipantsCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -24,8 +23,10 @@ export default function TournamentList() {
         if (error) throw error;
 
         const tournamentsData = data || [];
+        console.log('🔍 DEBUG Tournaments:', tournamentsData);
 
         const validTournaments = tournamentsData.filter(t => t && t.id);
+        console.log('✅ Tornei validi:', validTournaments.length);
 
         const counts = {};
         for (const tournament of validTournaments) {
@@ -49,23 +50,6 @@ export default function TournamentList() {
     fetchTournaments();
   }, []);
 
-  const handleDeleteTournament = async (t) => {
-    if (!window.confirm("Sei sicuro di voler eliminare questo torneo?")) return;
-
-    const { error } = await supabase.rpc('delete_tournament_safe', {
-      p_tournament_id: t.id
-    });
-
-    if (error) {
-      alert("Errore durante l'eliminazione del torneo: " + error.message);
-      console.error(error);
-      return;
-    }
-
-    alert("Torneo eliminato!");
-    setTournaments(tournaments.filter(tr => tr.id !== t.id));
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[80vh]">
@@ -77,16 +61,6 @@ export default function TournamentList() {
   return (
     <div className="min-h-[90vh] bg-gray-50 pt-4 pb-12">
       <div className="max-w-7xl mx-auto space-y-8">
-
-        {/* ← Bottone indietro alla pagina precedente */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300 text-sm bg-white hover:bg-gray-50"
-        >
-          ← Indietro
-        </button>
-
         <div className="text-center">
           <div className="w-20 h-20 bg-yellow-100 rounded-xl mx-auto mb-4 flex items-center justify-center">
             <Trophy className="w-9 h-9 text-yellow-600" />
@@ -109,14 +83,12 @@ export default function TournamentList() {
               const progress = t.max_players ? Math.min((iscritti / t.max_players) * 100, 100) : 0;
 
               return (
-                <div
+                <Link
                   key={t.id}
-                  className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all hover:-translate-y-2 border border-gray-200 flex flex-col h-full"
+                  to={`/tabellone/${t.id}`}
+                  className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all hover:-translate-y-2 border border-gray-200 block h-full hover:border-blue-300"
                 >
-                  <Link
-                    to={`/tabellone/${t.id}`}
-                    className="block flex-1 p-6 border-b border-gray-100"
-                  >
+                  <div className="p-6 border-b border-gray-100">
                     <h2 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-tight">
                       {t.name || '—'}
                     </h2>
@@ -151,18 +123,9 @@ export default function TournamentList() {
                       💰 {t.price ? `€${t.price}` : 'Gratis'} • 📅{' '}
                       {new Date(t.created_at).toLocaleDateString('it-IT')}
                     </div>
-                  </Link>
+                  </div>
 
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteTournament(t)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-b-xl transition-all"
-                    >
-                      Elimina torneo
-                    </button>
-                  )}
-
-                  <div className="p-6 pt-3">
+                  <div className="p-6 pt-0">
                     <div className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm group-hover:shadow-md transition-all text-sm hover:from-emerald-600 hover:to-green-700">
                       {isAdmin
                         ? <>ADMIN: Tabellone Completo</>
@@ -171,7 +134,7 @@ export default function TournamentList() {
                         : 'Iscriviti Ora'}
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

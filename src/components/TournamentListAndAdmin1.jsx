@@ -32,27 +32,6 @@ export default function TournamentListAndAdmin() {
     fetchTournaments();
   }, []);
 
-  // 🗑️ FUNZIONE ELIMINA TORNEO (aggiunta senza modificare nulla)
-  const handleDeleteTournament = async (id) => {
-    const { error } = await supabase
-      .from("tournaments")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("Errore eliminazione torneo:", error);
-      return;
-    }
-
-    // Aggiorna lista
-    setTournaments((prev) => prev.filter((t) => t.id !== id));
-
-    // Se stavi guardando il torneo eliminato, chiudi il tabellone
-    if (selectedTournament === id) {
-      setSelectedTournament(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center p-4">
@@ -74,19 +53,6 @@ export default function TournamentListAndAdmin() {
             onClick={() => setSelectedTournament(t.id)}
           >
             <h2 className="text-lg font-semibold">{t.name}</h2>
-
-            {/* 🗑️ BOTTONE ELIMINA — aggiunto solo se admin */}
-            {isAdmin && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); // evita apertura tabellone
-                  handleDeleteTournament(t.id);
-                }}
-                className="mt-2 text-red-600 hover:text-red-800 font-semibold"
-              >
-                Elimina
-              </button>
-            )}
           </div>
         ))}
       </div>

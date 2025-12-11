@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthProvider';
-import { Users, Loader2, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Loader2, Calendar, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 
 export default function TournamentRegisterAuth() {
   const [tournaments, setTournaments] = useState([]);
@@ -17,9 +17,23 @@ export default function TournamentRegisterAuth() {
   }, []);
 
   const fetchTournaments = async () => {
-    const { data, error } = await supabase.from('tournaments').select('*');
+    // Ora selezioniamo anche il numero di iscritti
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select(`
+        *,
+        tournament_registrations:user_id (user_id)
+      `);
+
     if (error) console.error(error);
-    else setTournaments(data || []);
+    else {
+      // trasformiamo i dati aggiungendo totalIscritti
+      const tournamentsWithCount = (data || []).map(t => ({
+        ...t,
+        totalIscritti: t.tournament_registrations?.length || 0
+      }));
+      setTournaments(tournamentsWithCount);
+    }
     setLoading(false);
   };
 
@@ -34,7 +48,7 @@ export default function TournamentRegisterAuth() {
       const { error } = await supabase
         .from('tournament_registrations')
         .insert({ 
-          tournament_id: selectedTorneo,
+          tournament_id: selectedTorneo, // non convertiamo in Number
           user_id: user.id
         });
       
@@ -43,7 +57,7 @@ export default function TournamentRegisterAuth() {
       } else {
         setMessage({ type: 'success', text: '✅ Iscrizione avvenuta con successo!' });
         setSelectedTorneo('');
-        fetchTournaments();
+        fetchTournaments(); // ricarichiamo tornei con iscritti aggiornati
       }
     } catch (err) {
       setMessage({ type: 'error', text: `❌ Errore: ${err.message}` });
@@ -113,7 +127,7 @@ export default function TournamentRegisterAuth() {
                   <option value="">📋 Seleziona un torneo</option>
                   {tournaments.map(t => (
                     <option key={t.id} value={t.id} className="text-sm">
-                      {t.nome} ({t.max_players || t.max_players} max) - €{t.price || 0}
+                      {t.nome} ({t.totalIscritti}/{t.max_players || t.max_players} max) - €{t.price || 0}
                     </option>
                   ))}
                 </select>
@@ -167,127 +181,15 @@ export default function TournamentRegisterAuth() {
 
 // ------------------------------------------------------------
 
-// src/components/TournamentSignup.jsx - ✅ LAYOUT DASHBOARD COMPATTO
-import React, { useState } from 'react';
-import { registerToTournament } from '../utils/registerToTournament';
-import { useAuth } from '../context/AuthProvider';
-import { Users, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+// I componenti TournamentSignup e TournamentViewOnly non cambiano se non per UUID fix
+// Correggiamo solo TournamentViewOnly per UUID e iscritti
 
-export default function TournamentSignup({ tournamentId, tournamentPrice, onSuccess }) {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
-
-  const handleSignup = async () => {
-    if (!user) {
-      setMessage({ type: 'error', text: 'Devi effettuare il login per iscriverti' });
-      return;
-    }
-    
-    if (!tournamentId) {
-      setMessage({ type: 'error', text: 'ID torneo mancante' });
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-    
-    try {
-      const res = await registerToTournament({ 
-        userId: user.id, 
-        tournamentId 
-      });
-      
-      setLoading(false);
-      
-      if (res.ok) {
-        setMessage({ type: 'success', text: `✅ Iscrizione avvenuta con successo! Costo: €${tournamentPrice || 0}` });
-        if (onSuccess) onSuccess(res.data);
-      } else {
-        setMessage({ type: 'error', text: `❌ Errore: ${res.error?.message || 'Errore sconosciuto'}` });
-      }
-    } catch (error) {
-      setLoading(false);
-      setMessage({ type: 'error', text: `❌ Errore: ${error.message}` });
-    }
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-md mx-auto hover:shadow-md transition-all hover:-translate-y-0.5">
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-blue-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
-          <Users className="w-8 h-8 text-blue-600" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Iscrizione Torneo</h2>
-        <p className="text-sm text-gray-600">Torneo ID: <strong>{tournamentId}</strong></p>
-      </div>
-      
-      {message && (
-        <div className={`p-4 rounded-xl mb-6 flex items-start gap-3 shadow-sm ${
-          message.type === 'success' 
-            ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
-            : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
-          {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-          )}
-          <span className="font-medium">{message.text}</span>
-        </div>
-      )}
-      
-      {!user && (
-        <div className="text-center py-8 space-y-4">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
-          <p className="text-lg font-semibold text-gray-900 mb-4">Login richiesto</p>
-          <p className="text-sm text-gray-600 mb-6">Devi effettuare il login per iscriverti</p>
-          <a 
-            href="/auth" 
-            className="block w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2"
-          >
-            Vai al Login →
-          </a>
-        </div>
-      )}
-      
-      {user && (
-        <div className="space-y-4">
-          <button 
-            onClick={handleSignup} 
-            disabled={loading || !tournamentId}
-            className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Iscrizione in corso...
-              </>
-            ) : (
-              <>
-                <Users className="w-5 h-5" />
-                📝 Iscriviti al Torneo
-              </>
-            )}
-          </button>
-          
-          <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-100">
-            Utente: <strong>{user.email}</strong> | Prezzo: €{tournamentPrice || 0}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------
-
-// src/components/TournamentViewOnly.jsx - ✅ LAYOUT DASHBOARD COMPATTO
+// src/components/TournamentViewOnly.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Users, Plus, CheckCircle, Loader2, Calendar } from 'lucide-react';
 
-export default function TournamentViewOnly() {
+export function TournamentViewOnly() {
   const [tournaments, setTournaments] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState({});
   const [loading, setLoading] = useState(true);
@@ -304,11 +206,19 @@ export default function TournamentViewOnly() {
     try {
       const { data: tournamentsData, error: tournamentsError } = await supabase
         .from('tournaments')
-        .select('*')
+        .select(`
+          *,
+          tournament_registrations:user_id (user_id)
+        `)
         .order('created_at', { ascending: false });
-      
+
       if (tournamentsError) throw tournamentsError;
-      setTournaments(tournamentsData || []);
+
+      const tournamentsWithCount = (tournamentsData || []).map(t => ({
+        ...t,
+        totalIscritti: t.tournament_registrations?.length || 0
+      }));
+      setTournaments(tournamentsWithCount);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.id) {
@@ -339,7 +249,7 @@ export default function TournamentViewOnly() {
       const { error } = await supabase
         .from('tournament_registrations')
         .insert({
-          tournament_id: Number(tournamentId),
+          tournament_id: tournamentId, // non Number()
           user_id: user.id
         });
       
@@ -381,11 +291,11 @@ export default function TournamentViewOnly() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tournaments.map(t => (
             <div key={t.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-3 group">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2">{t.name}</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{t.name}</h3>
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                   <Users className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-gray-700">{t.max_players || 16} posti | €{t.price || 0}</span>
+                  <span className="text-sm font-semibold text-gray-700">{t.totalIscritti}/{t.max_players || 16} posti | €{t.price || 0}</span>
                 </div>
                 <span className={`block w-full px-4 py-2 rounded-xl text-sm font-bold text-center text-white ${
                   t.status === 'pianificato' ? 'bg-blue-600' :

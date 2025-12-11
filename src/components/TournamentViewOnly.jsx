@@ -1,11 +1,10 @@
-// src/components/TournamentViewOnly.jsx - Versione Layout Pulita con Indietro + Vai al Tabellone + Aggiornamento iscritti
+// src/components/TournamentViewOnly.jsx - Versione con aggiornamento iscritti automatico
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Users, Plus, CheckCircle, Loader2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; 
-// import { triggerParticipantsRefresh } from './TournamentBracket'; // 🔹 Temporaneamente commentato
 
-export default function TournamentViewOnly() {
+export default function TournamentViewOnly({ triggerParticipantsRefresh = () => {} }) {
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState({});
@@ -58,19 +57,17 @@ export default function TournamentViewOnly() {
       const { error } = await supabase
         .from('tournament_registrations')
         .insert({
-          tournament_id: Number(tournamentId),
+          tournament_id: tournamentId,
           user_id: user.id
         });
       
       if (error) throw error;
+
       setMessage({ type: 'success', text: '✅ Iscritto con successo!' });
-
-      // 🔹 Aggiorna automaticamente la lista partecipanti del tabellone
-      // if (typeof triggerParticipantsRefresh === 'function') {
-      //   triggerParticipantsRefresh();
-      // }
-
       fetchData();
+
+      // 🔹 Aggiorna il tabellone
+      triggerParticipantsRefresh();
     } catch (error) {
       setMessage({ type: 'error', text: `❌ Errore: ${error.message}` });
     } finally {
@@ -80,20 +77,20 @@ export default function TournamentViewOnly() {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="animate-spin w-12 h-12 text-gray-700" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin w-12 h-12 text-blue-600" />
       </div>
     );
 
   if (fetchError)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white text-red-600">
+      <div className="min-h-screen flex items-center justify-center text-red-600">
         {fetchError}
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-white pt-4 pb-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 pt-4 pb-12">
       <div className="p-6 max-w-6xl mx-auto space-y-8">
 
         {/* BOTTONE INDietro */}
@@ -106,7 +103,7 @@ export default function TournamentViewOnly() {
           </button>
         </div>
 
-        {/* HEADER PULITO */}
+        {/* HEADER */}
         <div className="text-center">
           <div className="w-20 h-20 bg-gray-100 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-sm border border-gray-200">
             <Calendar className="w-9 h-9 text-gray-700" />
@@ -148,9 +145,7 @@ export default function TournamentViewOnly() {
                   </span>
                 </div>
 
-                <span
-                  className="block w-full px-4 py-2 rounded-xl text-sm font-bold text-center text-white bg-gray-700"
-                >
+                <span className="block w-full px-4 py-2 rounded-xl text-sm font-bold text-center text-white bg-gray-700">
                   {t.status}
                 </span>
               </div>

@@ -1,7 +1,6 @@
 // src/components/TournamentPlayers.jsx
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthProvider";
 import { Users, Loader2 } from "lucide-react";
 
 export default function TournamentPlayers({ tournamentId, bracketSlots, setBracketSlots }) {
