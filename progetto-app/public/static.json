@@ -1,0 +1,8 @@
+# 1. Crea public/static.json
+mkdir public
+echo '{"rewrites":[{"source":"**","destination":"/index.html"}]}' > public/static.json
+
+# 2. git add .
+git add .
+git commit -m "fix: render.com 404 + static.json"
+git push origin main
