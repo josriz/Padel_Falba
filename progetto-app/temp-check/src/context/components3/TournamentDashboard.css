@@ -1,0 +1,244 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { supabase } from "../supabaseClient"; 
+
+// 🛑 Import CSS rimosso per stabilità: import "./TournamentDashboard.css"; 🛑
+
+// Il componente ora utilizza stili in linea (inline styles) per il layout di base.
+export default function TournamentDashboard({ isAdmin }) {
+    const [players, setPlayers] = useState([]);
+    const [matches, setMatches] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [form, setForm] = useState({ name: "", surname: "", email: "", phone: "" });
+    const [message, setMessage] = useState("");
+
+    // --- UTILITY: Mappa i dati del DB in round per la visualizzazione ---
+    const organizeMatchesByRound = useCallback((allMatches) => {
+        const rounds = {};
+        allMatches.forEach(match => {
+            const roundName = `round${match.round_number}`; 
+            if (!rounds[roundName]) {
+                rounds[roundName] = [];
+            }
+            rounds[roundName].push(match);
+        });
+        Object.keys(rounds).forEach(key => {
+            rounds[key].sort((a, b) => (a.match_index || 0) - (b.match_index || 0));
+        });
+        return rounds;
+    }, []);
+
+    // --- LOGICA FETCHING DATI ---
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        setMessage("");
+        try {
+            // 1. Carica tutti i giocatori
+            const { data: pData, error: pError } = await supabase
+                .from("tournament_players")
+                .select("id, name, surname");
+            if (pError) throw pError;
+            setPlayers(pData);
+
+            // 2. Carica tutti i match del tabellone
+            const { data: mData, error: mError } = await supabase
+                .from("tournament_matches")
+                .select("*")
+                .order("round_number", { ascending: false })
+                .order("match_index", { ascending: true });
+                
+            if (mError) throw mError;
+            setMatches(mData || []);
+
+        } catch (e) {
+            console.error("Errore fetchData:", e.message);
+            setMessage("Errore caricamento dati: " + e.message);
+        }
+        setLoading(false);
+    };
+
+
+    // --- LOGICA ISCRIZIONE GIOCATORE (CREATE) ---
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        if (!form.name || !form.surname || !form.email || !form.phone) {
+            setMessage("Compila tutti i campi");
+            return;
+        }
+        if (players.length >= 32) {
+            setMessage("Iscrizioni chiuse, posti terminati!");
+            return;
+        }
+        
+        const { error } = await supabase.from("tournament_players").insert([form]);
+        
+        if (!error) {
+            setForm({ name: "", surname: "", email: "", phone: "" });
+            fetchData(); 
+            setMessage("✅ Iscrizione avvenuta!");
+        } else {
+            setMessage("❌ Errore iscrizione: " + error.message);
+        }
+    };
+
+
+    // --- LOGICA AVANZAMENTO VINCITORE (PERSISTENTE) ---
+    const advanceWinner = async (currentMatch, winnerId) => {
+        if (!winnerId) return;
+
+        const nextRound = currentMatch.round_number / 2; 
+        const targetIndex = Math.floor(currentMatch.match_index / 2);
+        const fieldToUpdate = currentMatch.match_index % 2 === 0 ? "player_a_id" : "player_b_id";
+
+        const nextMatch = matches.find(
+            m => m.round_number === nextRound && m.match_index === targetIndex
+        );
+
+        if (!nextMatch) {
+            const { error: insertError } = await supabase.from("tournament_matches").insert({
+                round_number: nextRound,
+                match_index: targetIndex,
+                [fieldToUpdate]: winnerId,
+            });
+            if (insertError) console.error("Errore creazione match successivo:", insertError.message);
+
+        } else {
+            const { error: updateError } = await supabase.from("tournament_matches")
+                .update({ [fieldToUpdate]: winnerId })
+                .eq("id", nextMatch.id);
+            if (updateError) console.error("Errore aggiornamento match successivo:", updateError.message);
+        }
+    };
+
+
+    // --- LOGICA AGGIORNAMENTO PUNTEGGI (PERSISTENTE) ---
+    const updateMatchScore = async (matchId, roundNumber, matchIndex, playerAId, playerBId, scoreA, scoreB, side, score) => {
+        if (!isAdmin) {
+             setMessage("Non hai i permessi per aggiornare il punteggio.");
+             return;
+        }
+
+        const parsedScore = score === "" ? null : parseInt(score, 10);
+        let currentScoreA = side === "a" ? parsedScore : scoreA;
+        let currentScoreB = side === "b" ? parsedScore : scoreB;
+
+        const updatePayload = {
+            score_a: currentScoreA,
+            score_b: currentScoreB,
+            winner_id: null,
+        };
+
+        let winnerId = null;
+
+        if (currentScoreA !== null && currentScoreB !== null) {
+            if (currentScoreA > currentScoreB) {
+                winnerId = playerAId;
+            } else if (currentScoreB > currentScoreA) {
+                winnerId = playerBId;
+            }
+            updatePayload.winner_id = winnerId;
+        }
+        
+        const { error } = await supabase.from("tournament_matches")
+            .update(updatePayload)
+            .eq("id", matchId);
+
+        if (error) {
+            console.error("Errore updateMatchScore:", error.message);
+            setMessage("❌ Errore nel salvataggio del punteggio.");
+        } else {
+            setMessage("Punteggio aggiornato!");
+            if (winnerId) {
+                await advanceWinner({ round_number: roundNumber, match_index: matchIndex }, winnerId);
+            }
+            fetchData(); 
+        }
+    };
+
+
+    // --- COMPONENTE MATCH PER LA VISUALIZZAZIONE ---
+    const Match = ({ match }) => {
+        const playerA = players.find(p => p.id === match.player_a_id);
+        const playerB = players.find(p => p.id === match.player_b_id);
+
+        return (
+            <div style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px', display: 'flex', gap: '5px', alignItems: 'center', backgroundColor: match.winner_id ? '#e6ffe6' : '#fff', borderRadius: '4px' }}>
+                <span style={{ width: '150px' }}>{playerA ? `${playerA.name} ${playerA.surname}` : "Giocatore A"}</span>
+                
+                {/* Visualizzazione/Input Punteggio A */}
+                <input
+                    type="number"
+                    min="0"
+                    style={{ width: '60px', textAlign: 'center', padding: '5px' }}
+                    placeholder="A"
+                    value={match.score_a ?? ""}
+                    onChange={e => updateMatchScore(match.id, match.round_number, match.match_index, match.player_a_id, match.player_b_id, match.score_a, match.score_b, "a", e.target.value)}
+                    disabled={!isAdmin || !playerA}
+                />
+                
+                <span>-</span>
+
+                {/* Visualizzazione/Input Punteggio B */}
+                <input
+                    type="number"
+                    min="0"
+                    style={{ width: '60px', textAlign: 'center', padding: '5px' }}
+                    placeholder="B"
+                    value={match.score_b ?? ""}
+                    onChange={e => updateMatchScore(match.id, match.round_number, match.match_index, match.player_a_id, match.player_b_id, match.score_a, match.score_b, "b", e.target.value)}
+                    disabled={!isAdmin || !playerB}
+                />
+                
+                <span style={{ width: '150px' }}>{playerB ? `${playerB.name} ${playerB.surname}` : "Giocatore B"}</span>
+                
+                {match.winner_id && <span style={{ color: 'green', fontWeight: 'bold', marginLeft: '10px' }}>🏆 Vincitore: {players.find(p => p.id === match.winner_id)?.name}</span>}
+            </div>
+        );
+    };
+    
+    const organizedRounds = organizeMatchesByRound(matches);
+
+    if (loading) return <p style={{ padding: '20px' }}>Caricamento torneo...</p>;
+
+    return (
+        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <h1>Torneo Padel</h1>
+
+            {!isAdmin && (
+                <form onSubmit={handleRegister} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                    <input type="text" placeholder="Nome" value={form.name} onChange={e => setForm({...form, name:e.target.value})} required style={{ padding: '8px', flexGrow: '1' }}/>
+                    <input type="text" placeholder="Cognome" value={form.surname} onChange={e => setForm({...form, surname:e.target.value})} required style={{ padding: '8px', flexGrow: '1' }}/>
+                    <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} required style={{ padding: '8px', flexGrow: '1' }}/>
+                    <input type="text" placeholder="Cellulare" value={form.phone} onChange={e => setForm({...form, phone:e.target.value})} required style={{ padding: '8px', flexGrow: '1' }}/>
+                    <button type="submit" style={{ padding: '8px 15px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', flexShrink: '0' }}>Iscriviti</button>
+                    <p style={{ width: '100%', margin: '0', color: message.includes('✅') ? 'green' : 'red' }}>{message}</p>
+                </form>
+            )}
+            
+            {isAdmin && message && <p style={{ color: 'blue', border: '1px solid lightblue', padding: '10px' }}>{message}</p>}
+
+            <h2>Tabellone</h2>
+            <div style={{ display: 'flex', overflowX: 'auto', paddingBottom: '15px' }}>
+                {/* Mappa dinamicamente i round disponibili */}
+                {Object.keys(organizedRounds).map(roundKey => {
+                    const roundNumber = organizedRounds[roundKey][0]?.round_number;
+                    if (!roundNumber) return null;
+
+                    return (
+                        <div key={roundKey} style={{ marginRight: '30px', minWidth: '350px' }}>
+                            <h3 style={{ borderBottom: '2px solid #ddd', paddingBottom: '5px' }}>{roundNumber === 16 ? "Sedicesimi" : roundNumber === 8 ? "Quarti" : roundNumber === 4 ? "Semifinali" : roundNumber === 2 ? "Finale" : `Round ${roundNumber}`}</h3>
+                            {organizedRounds[roundKey].map((m) => (
+                                <Match key={m.id} match={m} />
+                            ))}
+                        </div>
+                    );
+                })}
+
+                {matches.length === 0 && <p>Nessun match caricato. L'Admin deve inizializzare il primo round nel DB.</p>}
+            </div>
+        </div>
+    );
+}
