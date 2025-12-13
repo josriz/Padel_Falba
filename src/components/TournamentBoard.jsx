@@ -33,6 +33,14 @@ export default function TournamentBoard({ tournamentId }) {
 
   const byRound = (round) => matches.filter((m) => m.round === round);
 
+  const renderTeam = (teamStr, fallback) => {
+    if (!teamStr) return fallback;
+    const parts = teamStr.split(",").filter(Boolean);
+    if (parts.length === 0) return fallback;
+    if (parts.length === 1) return `Giocatore ${parts[0].slice(0, 6)}…`;
+    return `Coppia ${parts[0].slice(0, 4)}… / ${parts[1].slice(0, 4)}…`;
+  };
+
   const renderMatchCard = (m) => (
     <div
       key={m.id}
@@ -41,18 +49,18 @@ export default function TournamentBoard({ tournamentId }) {
       <div className="flex flex-col mb-1">
         <div className="flex justify-center gap-1 my-0.5">
           <div className="px-1 py-0.5 bg-emerald-50 rounded text-xs">
-            {m.player1 || "Squadra 1"}
+            {renderTeam(m.player1, "Squadra 1")}
           </div>
         </div>
         <div className="flex justify-center gap-1 my-0.5">
           <div className="px-1 py-0.5 bg-emerald-50 rounded text-xs">
-            {m.player2 || "Squadra 2"}
+            {renderTeam(m.player2, "Squadra 2")}
           </div>
         </div>
       </div>
 
       <div className="mt-1 bg-cyan-50 font-semibold px-1 py-0.5 rounded text-[11px]">
-        {m.court ? `Campo ${m.court}` : "Campo -"}
+        {m.court ? String(m.court) : "Campo -"}
       </div>
 
       {m.score && (
@@ -76,7 +84,11 @@ export default function TournamentBoard({ tournamentId }) {
       <div className="flex flex-col items-center space-y-6">
         <Round title="Ottavi" matches={byRound("ottavi")} render={renderMatchCard} />
         <Round title="Quarti" matches={byRound("quarti")} render={renderMatchCard} />
-        <Round title="Semifinali" matches={byRound("semifinale")} render={renderMatchCard} />
+        <Round
+          title="Semifinali"
+          matches={byRound("semifinale")}
+          render={renderMatchCard}
+        />
         <Round title="Finale" matches={byRound("finale")} render={renderMatchCard} />
       </div>
     </div>

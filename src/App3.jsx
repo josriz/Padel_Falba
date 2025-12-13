@@ -5,7 +5,7 @@ import AuthProvider, { useAuth } from "./context/AuthProvider";
 // 🌟 HOME + PUBLIC
 import Home from "./components/Home";
 import LoginPages from "./components/LoginPages";
-import RegistrationPage from "./components/RegistrationPage";
+import RegistrationPage from "./components/RegistrationPage";  
 
 // 👤 DASHBOARD USER
 import Dashboard from "./components/Dashboard";
@@ -14,7 +14,7 @@ import Marketplace from "./components/Marketplace";
 
 // 🏆 TORNEI
 import SingleTournament from "./components/SingleTournament";
-import TournamentList from "./components/TournamentList";
+import TournamentList from "./components/TournamentList";  
 import TournamentBracket from "./components/TournamentBracket";
 
 // ⚙️ ADMIN ONLY
@@ -35,7 +35,7 @@ function LoadingSpinner() {
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, role } = useAuth();
-
+  
   if (loading) return <LoadingSpinner />;
 
   if (!user) return <Navigate to="/" replace />;
@@ -89,7 +89,6 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/tournaments/:tournamentId"
           element={
@@ -98,7 +97,6 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/tournaments/:tournamentId/players"
           element={
@@ -107,13 +105,19 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-
-        {/* 🔁 VECCHIA ROTTA BOARD → NUOVA PAGINA TABELLONE */}
+        <Route
+          path="/tournaments/:tournamentId/bracket"
+          element={
+            <ProtectedRoute>
+              <SingleTournament />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/tournaments/:tournamentId/board"
           element={
-            <ProtectedRoute>
-              <TabellonePage />
+            <ProtectedRoute adminOnly>
+              <TournamentBracket />
             </ProtectedRoute>
           }
         />
@@ -127,7 +131,6 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin"
           element={
@@ -137,7 +140,7 @@ function AppContent() {
           }
         />
 
-        {/* 📱 TABELLONE — ROTTA UFFICIALE */}
+        {/* 📱 TABELLONE */}
         <Route
           path="/tabellone/:tournamentId"
           element={
@@ -147,12 +150,13 @@ function AppContent() {
           }
         />
 
-        {/* Redirect vari */}
+        {/* Demo: se vai a /tabellone-demo → rimando alla lista tornei */}
         <Route
           path="/tabellone-demo"
           element={<Navigate to="/tournaments" replace />}
         />
 
+        {/* Se qualcuno va a /tabellone “nudo”, rimando a /tournaments */}
         <Route
           path="/tabellone"
           element={<Navigate to="/tournaments" replace />}

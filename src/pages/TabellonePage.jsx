@@ -13,8 +13,8 @@ export default function TabellonePage() {
   }
 
   return (
-    <div className="p-4">
-      {/* Il bottone Indietro sta già DENTRO TournamentBracket */}
+    <div className="p-4 space-y-8">
+      {/* Unico blocco: iscritti + drag&drop + tabellone ufficiale */}
       <TournamentBracket tournamentId={tournamentId} />
     </div>
   );

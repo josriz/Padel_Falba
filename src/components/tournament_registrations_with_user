@@ -1,0 +1,16 @@
+-- src/db/view_tournament_registrations_with_user.sql
+
+drop view if exists public.tournament_registrations_with_user cascade;
+
+create view public.tournament_registrations_with_user as
+select
+  tr.id as registration_id,
+  tr.tournament_id,
+  tr.user_id,
+  tr.created_at as registration_created_at,
+  p.full_name as player_name,
+  p.id as profile_id,
+  p.created_at as profile_created_at
+from public.tournament_registrations tr
+left join public.profiles p
+  on p.id = tr.user_id;
